@@ -3,6 +3,7 @@ package atk.spacedog;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
@@ -56,12 +57,39 @@ public class EntryPoint extends Activity {
 
     }
 
+    void requestPermission()
+    {
+        //Log.d("audio Permission", "no");
+        //if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.RECORD_AUDIO)) {
+            AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+            alertBuilder.setCancelable(true);
+            alertBuilder.setTitle("Record Audio permission necessary to measure volume");
+            alertBuilder.setMessage("Spacedog needs permission to record audio to measure the volume of your voice." +
+                    "Spacedog never stores or transmits any audio data (or any other user data)." +
+                    "See privacy policy at https://lochsiedog.weebly.com/privacy-policy.html." +
+                    "If you deny this permission, the game will simply close.");
+            alertBuilder.setPositiveButton("I understand", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    ActivityCompat.requestPermissions(EntryPoint.this,
+                            new String[]{Manifest.permission.RECORD_AUDIO},
+                            AUDIO_RECORD_REQUEST);
+
+                }
+            });
+            AlertDialog audioAlert = alertBuilder.create();
+            audioAlert.show();
+        //}
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults){
         if (requestCode == AUDIO_RECORD_REQUEST){
             if(grantResults.length >0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 //nothing to do, the app will automatically move onto onResume on its own
-            } else{
+            }
+            /*else{
+
                 numRejections++;
                 if(numRejections>1){
                     finish();
@@ -74,6 +102,7 @@ public class EntryPoint extends Activity {
                 toast.show();
 
             } //what to do if permission not granted?
+            */
         }
     }
 
