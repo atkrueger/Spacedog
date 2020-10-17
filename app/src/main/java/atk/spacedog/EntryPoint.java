@@ -66,9 +66,9 @@ public class EntryPoint extends Activity {
             alertBuilder.setCancelable(true);
             alertBuilder.setTitle("Record Audio permission necessary to measure volume");
             alertBuilder.setMessage("Spacedog needs permission to record audio to measure the volume of your voice.\n" +
-                    "Spacedog never stores or transmits any audio data (or any other user data).\n" +
-                    "See privacy policy at https://lochsiedog.weebly.com/privacy-policy.html.\n" +
-                    "If you deny this permission, the game will simply close.");
+                    "Spacedog never stores or transmits any audio data (or any other user data)." +
+                    "If you deny this permission, the game will simply close.\n" +
+                    "See privacy policy at https://lochsiedog.weebly.com/privacy-policy.html." +);
             alertBuilder.setPositiveButton("I understand", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
