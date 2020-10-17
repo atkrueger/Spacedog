@@ -48,10 +48,11 @@ public class EntryPoint extends Activity {
         } else{ //ask permission
             //might want to use shouldShowRquestPermissionRationale() if user has denied previously
             //blah blah blah
-            String reqPermission = Manifest.permission.RECORD_AUDIO;
-            ActivityCompat.requestPermissions(this, new String[]{reqPermission},
-                    AUDIO_RECORD_REQUEST);
-            int duration = Toast.LENGTH_SHORT;
+            //String reqPermission = Manifest.permission.RECORD_AUDIO;
+            //ActivityCompat.requestPermissions(this, new String[]{reqPermission},
+             //       AUDIO_RECORD_REQUEST);
+            //int duration = Toast.LENGTH_SHORT;
+            requestPermission();
         }
         //Log.d("Event", "EntryPoint:onResume");
 
@@ -64,9 +65,9 @@ public class EntryPoint extends Activity {
             AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
             alertBuilder.setCancelable(true);
             alertBuilder.setTitle("Record Audio permission necessary to measure volume");
-            alertBuilder.setMessage("Spacedog needs permission to record audio to measure the volume of your voice." +
-                    "Spacedog never stores or transmits any audio data (or any other user data)." +
-                    "See privacy policy at https://lochsiedog.weebly.com/privacy-policy.html." +
+            alertBuilder.setMessage("Spacedog needs permission to record audio to measure the volume of your voice.\n" +
+                    "Spacedog never stores or transmits any audio data (or any other user data).\n" +
+                    "See privacy policy at https://lochsiedog.weebly.com/privacy-policy.html.\n" +
                     "If you deny this permission, the game will simply close.");
             alertBuilder.setPositiveButton("I understand", new DialogInterface.OnClickListener() {
                 @Override
@@ -87,6 +88,9 @@ public class EntryPoint extends Activity {
         if (requestCode == AUDIO_RECORD_REQUEST){
             if(grantResults.length >0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
                 //nothing to do, the app will automatically move onto onResume on its own
+            }
+            else{
+                System.exit(0);
             }
             /*else{
 
