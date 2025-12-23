@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Spacedog - Fart to Fly!</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; touch-action: none; background: #000; }
+        body { display: flex; justify-content: center; align-items: center; font-family: Arial, sans-serif; }
+        .game-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; }
+        #gameCanvas { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+        .ui-bar {
+            position: fixed; top: 0; left: 0; right: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 16px; z-index: 100; pointer-events: none;
+        }
+        .ui-item { color: #FFF; font-size: 14px; text-shadow: 2px 2px 0 #000; font-weight: bold; }
+        .hearts { font-size: 18px; }
+        .level-display { color: #FFD700; }
+
+        .volume-meter { display: flex; align-items: center; gap: 6px; }
+        .volume-bar-container { width: 60px; height: 10px; background: #333; border: 1px solid #555; }
+        .volume-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #4a4, #8f8); transition: width 0.05s; }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; color: #FFD700; z-index: 200; background: rgba(0, 0, 0, 0.9); padding: 20px;
+        }
+        .overlay h1 { font-size: 24px; margin-bottom: 20px; text-shadow: 3px 3px 0 #000; }
+        .overlay h2 { font-size: 18px; margin-bottom: 15px; color: #FFF; }
+        .overlay p { font-size: 12px; margin-bottom: 10px; color: #aaa; line-height: 1.8; }
+        .overlay .instruction { color: #8f8; font-size: 14px; margin: 15px 0; }
+
+        .btn {
+            margin: 10px; padding: 14px 28px; font-size: 14px; font-weight: bold;
+            background: #FFD700; color: #000; border: none; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .btn:hover, .btn:active { transform: scale(1.05); }
+        .btn.secondary { background: #4a4; color: #FFF; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
+
+        .calibration-panel {
+            position: fixed; top: 50%; right: 20px; transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.95); border: 2px solid #FFD700;
+            padding: 20px; z-index: 160; width: 240px;
+        }
+        .calibration-panel h3 { color: #FFD700; font-size: 14px; margin-bottom: 15px; text-align: center; }
+        .slider-group { margin-bottom: 15px; }
+        .slider-label { color: #aaa; font-size: 11px; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .slider-value { color: #8f8; }
+        input[type="range"] {
+            width: 100%; height: 24px; -webkit-appearance: none; background: transparent; cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track { height: 10px; background: #333; border: 1px solid #555; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 20px; height: 20px; background: #FFD700; margin-top: -6px;
+        }
+
+        .settings-btn {
+            position: fixed; bottom: 10px; right: 10px; padding: 8px 12px;
+            font-size: 11px; background: rgba(255, 215, 0, 0.3); color: #FFD700;
+            border: 1px solid #FFD700; cursor: pointer; z-index: 150;
+        }
+
+        .hidden { display: none !important; }
+
+        .instruction-box {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85); border: 2px solid #FFD700;
+            padding: 20px 40px; color: #FFF; font-size: 16px; text-align: center;
+            z-index: 150; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="ui-bar">
+            <div class="ui-item level-display">LEVEL: <span id="levelDisplay">1</span></div>
+            <div class="ui-item hearts" id="heartsDisplay"></div>
+            <div class="ui-item volume-meter" id="volumeMeter">
+                <span>MIC</span>
+                <div class="volume-bar-container"><div class="volume-bar" id="volumeBar"></div></div>
+            </div>
+        </div>
+
+        <div class="instruction-box hidden" id="instructionBox"></div>
+
+        <button class="settings-btn" id="settingsBtn">SETTINGS</button>
+
+        <div class="calibration-panel hidden" id="calibrationPanel">
+            <h3>CALIBRATION</h3>
+            <div class="slider-group">
+                <div class="slider-label"><span>SENSITIVITY</span><span class="slider-value" id="sensValue">7.0</span></div>
+                <input type="range" id="sensSlider" min="0" max="14" step="0.5" value="7">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>GRAVITY</span><span class="slider-value" id="gravValue">1.4</span></div>
+                <input type="range" id="gravSlider" min="0" max="2.8" step="0.1" value="1.4">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>NOISE FLOOR</span><span class="slider-value" id="threshValue">40</span></div>
+                <input type="range" id="threshSlider" min="0" max="80" step="5" value="40">
+            </div>
+            <button class="btn" id="closeSettings" style="width:100%;margin:10px 0 0 0;padding:10px;">DONE</button>
+        </div>
+
+        <div class="overlay" id="introOverlay">
+            <h1>SPACEDOG</h1>
+            <h2>Fart to Fly!</h2>
+            <p>Make noise to propel Spacedog upwards!</p>
+            <p>Catch tennis balls for health</p>
+            <p>Kill bosses with your farts!</p>
+            <div class="btn-group">
+                <button class="btn" id="micBtn">USE MICROPHONE</button>
+                <button class="btn secondary" id="tapBtn">TAP TO FLY</button>
+            </div>
+            <p id="micStatus" style="margin-top:15px;"></p>
+        </div>
+
+        <div class="overlay hidden" id="readyOverlay">
+            <h1>READY!</h1>
+            <p class="instruction" id="controlHint">Make noise to fly!</p>
+            <button class="btn" id="startBtn">START GAME</button>
+        </div>
+
+        <div class="overlay hidden" id="gameOverOverlay">
+            <h1 style="color:#f44;">GAME OVER</h1>
+            <p>Spacedog ran out of hearts!</p>
+            <button class="btn" id="restartBtn">TRY AGAIN</button>
+        </div>
+
+        <div class="overlay hidden" id="victoryOverlay">
+            <h1 style="color:#4f4;">VICTORY!</h1>
+            <p>You defeated all the bosses!</p>
+            <p>Spacedog is the champion!</p>
+            <button class="btn" id="victoryRestartBtn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+    // ==================== ASSET DATA ====================
+    const ASSETS = {
+        dachshund: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAKCAYAAABBq/VWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAY0lEQVQ4T2N4/2TDfyBgoBSDzEHGyHJUsQRm8M6qcBSLYGJUtQQbBsnDFcA0kIPRDUXHGIooxciGwzAKB5smUjCyWcgYhYNNIykY2SxkjMLBppEUjGwWMkbh4FNICA+wJf8ZANCwHDgFCBUlAAAAAElFTkSuQmCC',
+        dachshundHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAKCAYAAABBq/VWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAY0lEQVQ4T2N4K6PyHwgYKMUgc5AxshxVLIEZvLMqHMUimBhVLcGGQfJwBTAN5GB0Q9ExhiJKMbLhMIzCwaaJFIxsFjJG4WDTSApGNgsZo3CwaSQFI5uFjFE4+BQSwgNsyX8GAF2Dm+n5Q6NOAAAAAElFTkSuQmCC',
+        dachsFlipped: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAKCAYAAABBq/VWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAZ0lEQVQ4T8XNQQqAMAxE0dzSu3gqt97HvUcYmYVlUlJhSsHFAzHNTwBo7uuA0tksduLctxQm/dcvudhoHyO6MION4WDFkbfxOVyBvfIIVQsObaWwqhYd2kphVS06tJXCqn/o+OEI4gEwYBw4CZ87xQAAAABJRU5ErkJggg==',
+        dachsFlippedHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAKCAYAAABBq/VWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAZ0lEQVQ4T8XN0QmAMAyE4Qziozu5i5s5lDOc3IPlUlLhSsGHD8Q0fwJAc287lM5msRPXeaQw6b9+ycVG+xjRhRlsDAcrjryNz+EK7JVHqFpwaCuFVbXo0FYKq2rRoa0UVv1Dxw9HEA+oU5vpTSM2wgAAAABJRU5ErkJggg==',
+        pig: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAdElEQVQ4T62R3Q2AIAyEGcRH53cPh3GGisbWa3uVGH34QrifEqCJyM2y9gX2keB7Q4GAQXxujnBlFhjxvQzCNs0nqD15/5XfQsut3yZCc0mogkRPr62hajXsq2AAOyHpVyeVNRhBP5fDgBLI+/IBKyguK20Hvju6EMdmrioAAAAASUVORK5CYII=',
+        pigHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAPCAYAAAA71pVKAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAgElEQVQ4T52Q3Q2AIBCDGcRH53cPh3GGE0yKpVck8eHzQn9OpURE59r2Ot6zov5gAGiM8625Yii7wApbLlX6muApswA0qOeuJ2HyRrfg1/+C6WcrNpeEGozjTLgF9rYR1sm557bbgxcgrHAZnVTGAoX9VG5wYAbnh3LDFcCYjXIDxQ4EqtvFcyMAAAAASUVORK5CYII=',
+        cat: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAcUlEQVQoU52QUQ6AIAxDud4u6z384i5eoG6YzrKIiX680HVtIDQAzcz8wNArmLnEtuOtpJkxfOF/AYff7uiy+vG8fCOX1E9eFrS0grksBLn0H+GvaDhI0XtHwBChPxXUqAX6zIxBTS3XOZjC1JV7h3YCF8BrQ6dkkL4AAAAASUVORK5CYII=',
+        catHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAcklEQVQoU6WQyw2AMAxDOwlHxmcPTt2FBUyi/EyBSojDUxLHVqM2AA3LKkXqDPdYs+2Yhshjwwd+BA55XaHlTZfz6sZYRv+kZYBDb7ivAhzSH4mfI7OSTe8dSpqc1DnAwhgIPTxmIpHD46xczNGP1A7tBBD0hauqW/VLAAAAAElFTkSuQmCC',
+        rabbit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAALCAYAAABLcGxfAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAT0lEQVQoU2P4//8/OkYGGPIYAkD8/7/GSzAFBBjyGAJATLQGbABZHoxhDDDQboYyEABZMRgwIFlPFEA2AW4KHoDhaUJggDSgi8EwEPxnAADsTcop/nw+ogAAAABJRU5ErkJggg==',
+        rabbitHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAALCAYAAABLcGxfAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAR0lEQVQoU2P4//8/KjZ1+w/H6HJAjCEAVqjxkhYaQArQMZJCGEZRrN0M5OHSABVjgFtPJEaYgGQKTgxUMyQ0IPORMVjuPwMAdYVpaZdf8c8AAAAASUVORK5CYII=',
+        shuttleStationary: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwQAADsEBuJFr7QAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAABKSURBVDhPY/j//z+xGBnAxZEVEMJw0NDQAKLA4jgV4QPoBqAABqAQLgwDeA0gEoA1g/BwNABb4MEwDFA9GonFcECxAUAAFfvPAABvmn6nCaKK+gAAAABJRU5ErkJggg==',
+        shuttleMoving: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwQAADsEBuJFr7QAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAABaSURBVDhPrZFRCgAhCES9XdfyTF1wtrAVi3Rl68H8iA0PIwDZWGRWy7TwFYWZ0R83yF2K0IJhMEGt08vLavAHMd4ZJJGCY4PjgltHtEmxfmM2SmQQxSKzWvAA+k9+X6CbKgMAAAAASUVORK5CYII=',
+        shuttleStationaryHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwQAADsEBuJFr7QAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAABNSURBVDhP3ZE5DgAgCAR5Oj/H9QSNQQoqi1nJSqZQEpEYhGNi+jU8MQJmRtV7XaiYJY9dcFySA6LhCkIgfxbcHm+CaCR/4xieZAq0FyrlAL9Y/hzSMAAAAABJRU5ErkJggg==',
+        shuttleMovingHit: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAYAAABr5z2BAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwAAADsABataJCQAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAABkSURBVDhPxZFRDsAgCEO5ndfiTF6QVR0EF4Z8LNnHq0mpDVESkRqEQ1GvNxc44QqYWcbl4b+GMqxgbvAYUgJkL7hv2KAMdBJtUAKq/FzwzSNCDBfK2L8RVomoYDlBOMIVmNebXG/EvxBrfsl1AAAAAElFTkSuQmCC',
+        spaceship: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAANCAYAAABcrsXuAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAACNSURBVDhPrc/LCYAwEARQC/FoH17tKh3Zh2Ar1rAyykiyGfLBHJ6S/Ux0MjMphGC9fAbJogpo5bMgK6jFXj4zObQsKLW94iCw/9mPrKb2gP3iEHAQ1u00iutqj9AvDoxS/ZK/nj/BI77ompchb2D2dwmwOUKcm1wCaqGXz0wOpBZb+SzICqQCanzGy6Yb8xlbMIC0MqUAAAAASUVORK5CYII=',
+        bird: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAICAYAAAAvOAWIAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAR0lEQVQoU2P4//8/w7Fa4/8wDOLjwmACpIgByCSs+IEY3FSiTAZhZA24NKEoPHLoAApGVgjCeBWja0BRjEsDCMMVE6fhwH8A1zT/Kn9AOoYAAAAASUVORK5CYII=',
+        bullet: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAAHCAYAAADXhRcnAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAAOElEQVQoU2P4//8/TtzQ0PAfHyZZAzKGaGJgwCpJCIM1kq+ZIpuhfoVhbIpwYQzNyBibBgRu+A8AZ2QP8wY3t5AAAAAASUVORK5CYII=',
+        heart: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAAJCAYAAADkZNYtAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABl0RVh0U29mdHdhcmUAcGFpbnQubmV0IDQuMC4xMzQDW3oAAABKSURBVChTfc6xDQAhDARBF0JI/519DYc2MDJw/mAksFeCkBTfmALnW93tSx2me/cM4ELYYcc+59C1/6uy2TH+QhwxuhDHJblQUizvj/h+MyYVLQAAAABJRU5ErkJggg==',
+        tennisBall: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTM0A1t6AAAANUlEQVQoU2P4//8/Av+2/Q/GSGKYkmiKsEvCMFgBNgkkTIQCglaAFGBTBBVHKEBWBBf7zwAAbmXIKdQswN4AAAAASUVORK5CYII='
+    };
+
+    // ==================== LOAD IMAGES ====================
+    const images = {};
+    let imagesLoaded = 0;
+    const totalImages = Object.keys(ASSETS).length;
+
+    function loadImages(callback) {
+        for (const [name, src] of Object.entries(ASSETS)) {
+            const img = new Image();
+            img.onload = () => {
+                imagesLoaded++;
+                if (imagesLoaded === totalImages) callback();
+            };
+            img.src = src;
+            images[name] = img;
+        }
+    }
+
+    // ==================== CANVAS SETUP ====================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // ==================== GAME CONFIG ====================
+    const CONFIG = {
+        DEFAULT_SENSITIVITY: 7.0,
+        DEFAULT_GRAVITY: 1.4,
+        DEFAULT_THRESHOLD: 40,
+        VOLUME_CAP: 1500,
+        MAX_FARTS_PER_SEC: 20,
+        FART_COLOR: 'rgba(200, 100, 0, 0.5)',
+        INVINC_HIT_TIME: 1,
+        INVINC_BALL_TIME: 5,
+        START_HEARTS: 5,
+        MAX_HEARTS: 10
+    };
+
+    // ==================== GAME STATE ====================
+    let gameState = 'intro'; // intro, ready, playing, gameover, victory
+    let controlMode = 'mic';
+    let paused = false;
+
+    // Calibration
+    let sensitivity = parseFloat(localStorage.getItem('spacedog_sensitivity')) || CONFIG.DEFAULT_SENSITIVITY;
+    let gravity = parseFloat(localStorage.getItem('spacedog_gravity')) || CONFIG.DEFAULT_GRAVITY;
+    let threshold = parseInt(localStorage.getItem('spacedog_threshold')) || CONFIG.DEFAULT_THRESHOLD;
+
+    // Level state
+    let level = 1;
+    let secondsElapsed = 0;
+    let lastSecUpdated = -1;
+
+    // Player state
+    let hearts = CONFIG.START_HEARTS;
+    let invincibleHit = false;
+    let invincibleBall = false;
+    let invincibilityCounter = 0;
+    let dachsHit = false;
+    let dachsVisible = true;
+
+    // Audio
+    let audioContext, analyser, microphone;
+    let volumeLevel = 0;
+    let micReady = false;
+    let isTapping = false;
+
+    // ==================== GAME OBJECTS ====================
+    let dachshund = { x: 0, y: 0, width: 25, height: 10 };
+    let farts = [];
+    let obstacles = [];
+    let balls = [];
+    let tunnelRects = [];
+    let boss = null;
+    let stars = [];
+
+    // Ball spawn rates
+    let hballsPerSec = 0;
+    let iballsPerSec = 0;
+
+    // Fart timing
+    let secSinceFart = 0;
+
+    // Instructions
+    let instructionText = '';
+    let instructionTimeLeft = 0;
+
+    // ==================== STARS ====================
+    function initStars() {
+        stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() < 0.7 ? 1 : 2,
+                speed: 30 + Math.random() * 60
+            });
+        }
+    }
+
+    function updateStars(dt) {
+        stars.forEach(s => {
+            s.x -= s.speed * dt;
+            if (s.x < 0) {
+                s.x = canvas.width;
+                s.y = Math.random() * canvas.height;
+            }
+        });
+    }
+
+    function drawStars() {
+        ctx.fillStyle = '#FFF';
+        stars.forEach(s => {
+            ctx.fillRect(s.x, s.y, s.size, s.size);
+        });
+    }
+
+    // ==================== DACHSHUND ====================
+    function resetDachshund() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        dachshund.width = 25 * scale;
+        dachshund.height = 10 * scale;
+        dachshund.x = canvas.width / 3;
+        dachshund.y = canvas.height / 2;
+    }
+
+    function updateDachshund(dt, volume) {
+        // Gravity pulls down
+        dachshund.y += gravity * canvas.height * dt;
+
+        // Volume lifts up
+        if (volume > threshold) {
+            const volAboveThresh = volume - threshold;
+            const cappedVol = Math.min(volAboveThresh, CONFIG.VOLUME_CAP);
+            const volPct = cappedVol / CONFIG.VOLUME_CAP;
+            const yVolUp = volPct * canvas.height * sensitivity * dt;
+            dachshund.y -= yVolUp;
+        }
+
+        // Clamp to screen
+        if (dachshund.y < 0) dachshund.y = 0;
+        if (dachshund.y + dachshund.height > canvas.height) {
+            dachshund.y = canvas.height - dachshund.height;
+        }
+    }
+
+    function drawDachshund() {
+        if (!dachsVisible) return;
+
+        const img = dachsHit ? images.dachshundHit : images.dachshund;
+
+        ctx.save();
+        if (invincibleBall) {
+            // Random color tint when invincible from ball
+            ctx.filter = `hue-rotate(${Math.random() * 360}deg)`;
+        } else if (invincibleHit) {
+            // Flash when invincible from hit
+            if (Math.floor(invincibilityCounter * 10) % 2 === 0) {
+                ctx.globalAlpha = 0.5;
+            }
+        }
+
+        ctx.drawImage(img, dachshund.x, dachshund.y, dachshund.width, dachshund.height);
+        ctx.restore();
+    }
+
+    // ==================== FARTS ====================
+    function updateFarts(dt, volume) {
+        // Add new farts
+        secSinceFart += dt;
+        if (volume > threshold && secSinceFart >= 1 / CONFIG.MAX_FARTS_PER_SEC) {
+            secSinceFart = 0;
+            let fartWidth = (volume - threshold) * sensitivity / 150;
+            fartWidth = Math.min(fartWidth, canvas.height * 0.03);
+
+            farts.push({
+                x: dachshund.x - fartWidth,
+                y: dachshund.y + dachshund.height * 0.8,
+                width: fartWidth,
+                height: fartWidth
+            });
+        }
+
+        // Move farts
+        const xVel = -0.18 * canvas.width;
+        const yVel = 0.05 * canvas.height;
+
+        for (let i = farts.length - 1; i >= 0; i--) {
+            farts[i].x += xVel * dt;
+            farts[i].y += yVel * dt;
+
+            if (farts[i].x + farts[i].width < 0) {
+                farts.splice(i, 1);
+            }
+        }
+    }
+
+    function drawFarts() {
+        ctx.fillStyle = CONFIG.FART_COLOR;
+        farts.forEach(f => {
+            ctx.fillRect(f.x, f.y, f.width, f.height);
+        });
+    }
+
+    // ==================== OBSTACLES ====================
+    const MOVE_HORIZONTAL = 1;
+    const MOVE_DIAGONAL = 2;
+    const MOVE_SWIRL = 3;
+    const MOVE_OSCILLATE = 4;
+
+    function createObstacle(type, moveType, lives, speed) {
+        const img = type === 'spaceship' ? images.spaceship : images.bird;
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        const width = img.width * scale;
+        const height = img.height * scale;
+
+        const obs = {
+            type, moveType, lives, speed,
+            x: canvas.width + width * 2,
+            y: Math.random() * (canvas.height - height),
+            width, height,
+            xVel: 0, yVel: 0,
+            angle: Math.random() * Math.PI * 2,
+            isSpaceship: type === 'spaceship'
+        };
+
+        // Set velocities based on move type
+        if (moveType === MOVE_HORIZONTAL) {
+            obs.xVel = -speed * canvas.width;
+            obs.yVel = 0;
+        } else if (moveType === MOVE_DIAGONAL) {
+            const minAngle = Math.PI - Math.atan(obs.y / obs.x);
+            const maxAngle = Math.PI + Math.atan((canvas.height - obs.y) / obs.x);
+            const newAngle = Math.random() * (maxAngle - minAngle) + minAngle;
+            obs.xVel = speed * canvas.width * Math.cos(newAngle);
+            obs.yVel = -speed * canvas.width * Math.sin(newAngle);
+        } else if (moveType === MOVE_SWIRL || moveType === MOVE_OSCILLATE) {
+            obs.xVel = -speed * canvas.width;
+            obs.ySwirl = canvas.height * 0.8;
+        }
+
+        obstacles.push(obs);
+    }
+
+    function updateObstacles(dt) {
+        const ANGLE_PER_SEC = Math.PI * 1.5; // 270 degrees
+
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const o = obstacles[i];
+
+            if (o.moveType === MOVE_OSCILLATE) {
+                o.angle += ANGLE_PER_SEC * dt;
+                const yswirl = o.ySwirl * Math.sin(o.angle);
+                o.x += o.xVel * dt;
+                o.y += yswirl * dt;
+            } else if (o.moveType === MOVE_SWIRL) {
+                o.angle += ANGLE_PER_SEC * dt;
+                const yswirl = o.ySwirl * Math.sin(o.angle);
+                const xswirl = o.xVel + o.ySwirl * Math.cos(o.angle);
+                o.x += xswirl * dt;
+                o.y += yswirl * dt;
+            } else {
+                o.x += o.xVel * dt;
+                o.y += o.yVel * dt;
+            }
+
+            // Reset if off screen
+            if (o.x + o.width < 0) {
+                o.lives--;
+                if (o.lives > 0) {
+                    o.x = canvas.width + o.width * 2;
+                    o.y = Math.random() * (canvas.height - o.height);
+                } else {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+    }
+
+    function drawObstacles() {
+        obstacles.forEach(o => {
+            const img = o.type === 'spaceship' ? images.spaceship : images.bird;
+            ctx.drawImage(img, o.x, o.y, o.width, o.height);
+        });
+    }
+
+    // ==================== TUNNELS ====================
+    function addTunnelSection(secondsLong, margin) {
+        const speed = 0.75 * canvas.width;
+        const columnWidth = canvas.width * 0.01;
+        const numColumns = Math.floor((speed * secondsLong) / columnWidth);
+
+        let curX = canvas.width + columnWidth;
+        const maxShift = 0.02 * canvas.height;
+
+        let topsBottom = Math.random() * (1 - margin) * canvas.height;
+
+        for (let i = 0; i < numColumns; i++) {
+            const bottomsTop = topsBottom + canvas.height * margin;
+
+            tunnelRects.push({
+                x: curX, y: 0, width: columnWidth, height: topsBottom, isTop: true
+            });
+            tunnelRects.push({
+                x: curX, y: bottomsTop, width: columnWidth, height: canvas.height - bottomsTop, isTop: false
+            });
+
+            curX += columnWidth;
+
+            // Undulate
+            const change = (Math.random() - 0.5) * 2 * maxShift;
+            topsBottom += change;
+            topsBottom = Math.max(0, Math.min(topsBottom, (1 - margin) * canvas.height));
+        }
+    }
+
+    function updateTunnels(dt) {
+        const speed = 0.75 * canvas.width;
+        for (let i = tunnelRects.length - 1; i >= 0; i--) {
+            tunnelRects[i].x -= speed * dt;
+            if (tunnelRects[i].x + tunnelRects[i].width < 0) {
+                tunnelRects.splice(i, 1);
+            }
+        }
+    }
+
+    function drawTunnels() {
+        ctx.fillStyle = 'rgb(125, 125, 125)';
+        tunnelRects.forEach(r => {
+            if (r.x < canvas.width) {
+                ctx.fillRect(r.x, r.y, r.width, r.height);
+            }
+        });
+    }
+
+    // ==================== BALLS ====================
+    function updateBalls(dt) {
+        const ballRadius = canvas.width * 0.015;
+
+        // Spawn health balls
+        if (Math.random() < hballsPerSec * dt) {
+            balls.push({
+                type: 'health',
+                x: canvas.width + ballRadius,
+                y: Math.random() * (canvas.height - ballRadius * 2) + ballRadius,
+                radius: ballRadius,
+                speed: 0.7 * canvas.width
+            });
+        }
+
+        // Spawn invincibility balls
+        if (Math.random() < iballsPerSec * dt) {
+            balls.push({
+                type: 'invinc',
+                x: canvas.width + ballRadius,
+                y: Math.random() * (canvas.height - ballRadius * 2) + ballRadius,
+                radius: ballRadius,
+                speed: 0.8 * canvas.width
+            });
+        }
+
+        // Update balls
+        for (let i = balls.length - 1; i >= 0; i--) {
+            balls[i].x -= balls[i].speed * dt;
+            if (balls[i].x + balls[i].radius < 0) {
+                balls.splice(i, 1);
+            }
+        }
+    }
+
+    function drawBalls() {
+        balls.forEach(b => {
+            if (b.type === 'health') {
+                ctx.fillStyle = '#FFF';
+            } else {
+                // Rainbow flashing
+                const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF'];
+                ctx.fillStyle = colors[Math.floor(Date.now() / 100) % colors.length];
+            }
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    function checkBallCollection() {
+        const dachsCenterX = dachshund.x + dachshund.width / 2;
+        const dachsCenterY = dachshund.y + dachshund.height / 2;
+
+        for (let i = balls.length - 1; i >= 0; i--) {
+            const b = balls[i];
+            const dist = Math.sqrt(Math.pow(b.x - dachsCenterX, 2) + Math.pow(b.y - dachsCenterY, 2));
+
+            if (dist < b.radius + dachshund.width / 2) {
+                if (b.type === 'health') {
+                    hearts = Math.min(hearts + 1, CONFIG.MAX_HEARTS);
+                    updateHeartsDisplay();
+                } else {
+                    invincibleBall = true;
+                    invincibleHit = false;
+                    invincibilityCounter = CONFIG.INVINC_BALL_TIME;
+                }
+                balls.splice(i, 1);
+            }
+        }
+    }
+
+    // ==================== BOSSES ====================
+    function createPig() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        boss = {
+            type: 'pig',
+            x: canvas.width + 50,
+            y: canvas.height / 2,
+            width: images.pig.width * scale,
+            height: images.pig.height * scale,
+            maxLife: 15,
+            life: 15,
+            hit: false,
+            hitTimer: 0,
+            stage: 'BEGIN',
+            speed: canvas.width * 0.6,
+            xMargin: canvas.width * 0.025,
+            yMargin: canvas.height * 0.025
+        };
+    }
+
+    function createHoming() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        boss = {
+            type: 'homing',
+            x: canvas.width + 50,
+            y: Math.random() * canvas.height,
+            width: images.cat.width * scale,
+            height: images.cat.height * scale,
+            maxLife: 20,
+            life: 20,
+            hit: false,
+            hitTimer: 0,
+            stage: 'BEGIN',
+            horizSpeed: canvas.width * 0.8,
+            vertSpeed: canvas.height * 0.4
+        };
+    }
+
+    function createBossDachs() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        boss = {
+            type: 'bossdachs',
+            x: canvas.width + 50,
+            y: Math.random() * canvas.height,
+            width: images.dachsFlipped.width * scale,
+            height: images.dachsFlipped.height * scale,
+            maxLife: 25,
+            life: 25,
+            hit: false,
+            hitTimer: 0,
+            stage: 'BEGIN',
+            horizSpeed: canvas.width * 0.8
+        };
+    }
+
+    function createMagician() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        boss = {
+            type: 'magician',
+            x: canvas.width + 50,
+            y: Math.random() * canvas.height,
+            width: images.rabbit.width * scale,
+            height: images.rabbit.height * scale,
+            maxLife: 25,
+            life: 25,
+            hit: false,
+            hitTimer: 0,
+            stage: 'BEGIN',
+            dashSpeed: canvas.width * 2,
+            retreatSpeed: canvas.height * 0.5,
+            xVel: 0,
+            yVel: 0
+        };
+    }
+
+    function createShooter() {
+        const scale = Math.min(canvas.width, canvas.height) / 400;
+        boss = {
+            type: 'shooter',
+            x: canvas.width + 50,
+            y: Math.random() * canvas.height,
+            width: images.shuttleStationary.width * scale,
+            height: images.shuttleStationary.height * scale,
+            maxLife: 40,
+            life: 40,
+            hit: false,
+            hitTimer: 0,
+            stage: 'BEGIN',
+            horizSpeed: canvas.width * 0.8,
+            trackingSpeed: canvas.height * 0.5,
+            bulletTimer: 0,
+            bulletsFired: 0,
+            waitCounter: 0,
+            isMoving: false
+        };
+    }
+
+    function updateBoss(dt) {
+        if (!boss) return;
+
+        // Update hit timer
+        if (boss.hit) {
+            boss.hitTimer -= dt;
+            if (boss.hitTimer <= 0) {
+                boss.hit = false;
+            }
+        }
+
+        // Type-specific updates
+        if (boss.type === 'pig') {
+            updatePig(dt);
+        } else if (boss.type === 'homing') {
+            updateHoming(dt);
+        } else if (boss.type === 'bossdachs') {
+            updateBossDachs(dt);
+        } else if (boss.type === 'magician') {
+            updateMagician(dt);
+        } else if (boss.type === 'shooter') {
+            updateShooter(dt);
+        }
+
+        // Check fart collision
+        checkFartBossCollision();
+
+        // Check if defeated
+        if (boss.life <= 0) {
+            boss = null;
+            showInstruction('Boss Defeated!', 2);
+            setLevel(level + 1);
+        }
+    }
+
+    function updatePig(dt) {
+        const b = boss;
+        switch (b.stage) {
+            case 'BEGIN':
+                b.x = canvas.width + b.width;
+                b.y = canvas.height / 2;
+                b.stage = 'CENTERLEFT';
+                break;
+            case 'CENTERLEFT':
+                b.x -= b.speed * dt;
+                if (b.x <= b.xMargin) b.stage = 'CENTERRIGHT';
+                break;
+            case 'CENTERRIGHT':
+                b.x += b.speed * dt;
+                if (b.x + b.width >= canvas.width - b.xMargin) b.stage = 'CENTERUP';
+                break;
+            case 'CENTERUP':
+                b.y -= b.speed * dt;
+                if (b.y <= b.yMargin) b.stage = 'TOPLEFT';
+                break;
+            case 'TOPLEFT':
+                b.x -= b.speed * dt;
+                if (b.x <= b.xMargin) b.stage = 'TOPRIGHT';
+                break;
+            case 'TOPRIGHT':
+                b.x += b.speed * dt;
+                if (b.x + b.width >= canvas.width - b.xMargin) b.stage = 'CENTERDOWN';
+                break;
+            case 'CENTERDOWN':
+                b.y += b.speed * dt;
+                if (b.y + b.height >= canvas.height - b.yMargin) b.stage = 'BOTTOMLEFT';
+                break;
+            case 'BOTTOMLEFT':
+                b.x -= b.speed * dt;
+                if (b.x <= b.xMargin) b.stage = 'BOTTOMRIGHT';
+                break;
+            case 'BOTTOMRIGHT':
+                b.x += b.speed * dt;
+                if (b.x + b.width >= canvas.width - b.xMargin) b.stage = 'BOTTOMUP';
+                break;
+            case 'BOTTOMUP':
+                b.y -= b.speed * dt;
+                if (b.y + b.height / 2 <= canvas.height / 2) b.stage = 'CENTERLEFT';
+                break;
+        }
+    }
+
+    function updateHoming(dt) {
+        const b = boss;
+        const dachsCenterY = dachshund.y + dachshund.height / 2;
+        const bossCenterY = b.y + b.height / 2;
+
+        switch (b.stage) {
+            case 'BEGIN':
+                b.x = canvas.width + b.width;
+                b.y = Math.random() * canvas.height;
+                b.stage = 'HOMING';
+                break;
+            case 'HOMING':
+                const dachsAbove = dachsCenterY < bossCenterY;
+                const dir = dachsAbove ? -1 : 1;
+
+                b.x -= b.horizSpeed * dt;
+                b.y += dir * b.vertSpeed * dt;
+
+                // Check if overshot
+                const nowDachsAbove = dachsCenterY < (b.y + b.height / 2);
+                if (dachsAbove !== nowDachsAbove) {
+                    b.y = dachsCenterY - b.height / 2;
+                }
+
+                if (b.x + b.width < 0) {
+                    b.stage = 'BEGIN';
+                    b.hit = false;
+                }
+                break;
+        }
+    }
+
+    function updateBossDachs(dt) {
+        const b = boss;
+
+        switch (b.stage) {
+            case 'BEGIN':
+                b.x = canvas.width + b.width;
+                b.y = Math.random() * canvas.height;
+                b.stage = 'INVERSE';
+                break;
+            case 'INVERSE':
+                b.x -= b.horizSpeed * dt;
+                // Mirror player Y
+                const inverseY = canvas.height - (dachshund.y + dachshund.height / 2);
+                b.y = inverseY - b.height / 2;
+
+                if (b.x + b.width < 0) {
+                    b.stage = 'BEGIN';
+                    b.hit = false;
+                }
+                break;
+        }
+    }
+
+    function updateMagician(dt) {
+        const b = boss;
+
+        switch (b.stage) {
+            case 'BEGIN':
+                b.x = canvas.width + b.width;
+                b.y = Math.random() * canvas.height;
+
+                const minAngle = Math.PI - Math.atan(b.y / b.x);
+                const maxAngle = Math.PI + Math.atan((canvas.height - b.y) / b.x);
+                const newAngle = Math.random() * (maxAngle - minAngle) + minAngle;
+
+                b.xVel = b.dashSpeed * Math.cos(newAngle);
+                b.yVel = -b.dashSpeed * Math.sin(newAngle);
+
+                b.stage = 'DASH';
+                dachsVisible = false; // Make player invisible!
+                break;
+            case 'DASH':
+                b.x += b.xVel * dt;
+                b.y += b.yVel * dt;
+
+                if (b.x + b.width < -b.width * 4) {
+                    b.xVel *= -0.2;
+                    b.yVel *= -0.2;
+                    b.stage = 'RETREAT';
+                }
+                break;
+            case 'RETREAT':
+                b.x += b.xVel * dt;
+                b.y += b.yVel * dt;
+
+                if (b.x > canvas.width) {
+                    b.stage = 'BEGIN';
+                }
+                break;
+        }
+    }
+
+    function updateShooter(dt) {
+        const b = boss;
+        const dachsCenterY = dachshund.y + dachshund.height / 2;
+        const bossCenterY = b.y + b.height / 2;
+
+        switch (b.stage) {
+            case 'BEGIN':
+                b.x = canvas.width + b.width;
+                b.y = Math.random() * canvas.height;
+                b.stage = 'ENTERING';
+                b.isMoving = true;
+                break;
+            case 'ENTERING':
+                b.x -= b.horizSpeed * dt;
+                if (b.x + b.width < canvas.width * 0.95) {
+                    b.stage = 'SHOOTING';
+                    b.isMoving = false;
+                }
+                break;
+            case 'SHOOTING':
+                // Track player
+                const dachsAbove = dachsCenterY < bossCenterY;
+                const dir = dachsAbove ? -1 : 1;
+                b.y += dir * b.trackingSpeed * dt;
+
+                // Check overshoot
+                const nowDachsAbove = dachsCenterY < (b.y + b.height / 2);
+                if (dachsAbove !== nowDachsAbove) {
+                    b.y = dachsCenterY - b.height / 2;
+                }
+
+                // Fire bullets
+                b.bulletTimer += dt;
+                if (b.bulletTimer >= 0.5) {
+                    b.bulletTimer = 0;
+                    b.bulletsFired++;
+                    if (b.bulletsFired > 3) {
+                        b.stage = 'SWOOPING';
+                        b.bulletsFired = 0;
+                        b.isMoving = true;
+                    } else {
+                        // Fire bullet
+                        const scale = Math.min(canvas.width, canvas.height) / 400;
+                        obstacles.push({
+                            type: 'bullet',
+                            moveType: MOVE_HORIZONTAL,
+                            lives: 1,
+                            speed: 0.9,
+                            x: b.x,
+                            y: b.y + b.height / 2,
+                            width: images.bullet.width * scale,
+                            height: images.bullet.height * scale,
+                            xVel: -0.9 * canvas.width,
+                            yVel: 0,
+                            isSpaceship: false
+                        });
+                    }
+                }
+                break;
+            case 'SWOOPING':
+                b.x -= b.horizSpeed * dt;
+                if (b.x + b.width < 0) {
+                    b.stage = 'WAIT';
+                    b.hit = false;
+                }
+                break;
+            case 'WAIT':
+                b.waitCounter += dt;
+                if (b.waitCounter >= 1) {
+                    b.waitCounter = 0;
+                    b.stage = 'BEGIN';
+                }
+                break;
+        }
+    }
+
+    function checkFartBossCollision() {
+        if (!boss) return;
+        if (boss.x > dachshund.x + dachshund.width) return; // Boss too far right
+
+        for (let i = farts.length - 1; i >= 0; i--) {
+            const f = farts[i];
+            if (rectsIntersect(f, boss)) {
+                boss.life--;
+                boss.hit = true;
+                boss.hitTimer = 0.5;
+                farts.splice(i, 1);
+            }
+        }
+    }
+
+    function drawBoss() {
+        if (!boss) return;
+
+        let img;
+        if (boss.type === 'pig') {
+            img = boss.hit ? images.pigHit : images.pig;
+        } else if (boss.type === 'homing') {
+            img = boss.hit ? images.catHit : images.cat;
+        } else if (boss.type === 'bossdachs') {
+            img = boss.hit ? images.dachsFlippedHit : images.dachsFlipped;
+        } else if (boss.type === 'magician') {
+            img = boss.hit ? images.rabbitHit : images.rabbit;
+        } else if (boss.type === 'shooter') {
+            if (boss.isMoving) {
+                img = boss.hit ? images.shuttleMovingHit : images.shuttleMoving;
+            } else {
+                img = boss.hit ? images.shuttleStationaryHit : images.shuttleStationary;
+            }
+        }
+
+        ctx.save();
+        // Make more transparent as life decreases
+        const lifePct = boss.life / boss.maxLife;
+        ctx.globalAlpha = 0.22 + 0.78 * lifePct;
+        ctx.drawImage(img, boss.x, boss.y, boss.width, boss.height);
+        ctx.restore();
+
+        // Draw health bar
+        const barWidth = boss.width;
+        const barHeight = 6;
+        const barX = boss.x;
+        const barY = boss.y - 10;
+
+        ctx.fillStyle = '#333';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        ctx.fillStyle = '#F00';
+        ctx.fillRect(barX, barY, barWidth * lifePct, barHeight);
+    }
+
+    // ==================== COLLISION DETECTION ====================
+    function rectsIntersect(a, b) {
+        return a.x < b.x + b.width &&
+               a.x + a.width > b.x &&
+               a.y < b.y + b.height &&
+               a.y + a.height > b.y;
+    }
+
+    function checkDachsHit() {
+        // Check obstacles
+        for (const o of obstacles) {
+            let hitbox = { x: o.x, y: o.y, width: o.width, height: o.height };
+            // Spaceships have adjusted hitbox
+            if (o.isSpaceship) {
+                hitbox.x += o.width * 0.12;
+                hitbox.width *= 0.76;
+            }
+            if (rectsIntersect(dachshund, hitbox)) {
+                return true;
+            }
+        }
+
+        // Check boss
+        if (boss && rectsIntersect(dachshund, boss)) {
+            return true;
+        }
+
+        // Check tunnels
+        for (const t of tunnelRects) {
+            if (t.x > dachshund.x + dachshund.width) break;
+            if (rectsIntersect(dachshund, t)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    function handleDachsHit() {
+        dachsHit = checkDachsHit();
+
+        if (invincibleHit || invincibleBall) {
+            invincibilityCounter -= 1/60;
+            if (invincibilityCounter <= 0) {
+                invincibleHit = false;
+                invincibleBall = false;
+            }
+            return;
+        }
+
+        if (dachsHit) {
+            hearts--;
+            updateHeartsDisplay();
+            invincibleHit = true;
+            invincibilityCounter = CONFIG.INVINC_HIT_TIME;
+
+            if (hearts <= 0) {
+                gameState = 'gameover';
+                document.getElementById('gameOverOverlay').classList.remove('hidden');
+            }
+        }
+    }
+
+    // ==================== LEVEL HANDLER ====================
+    function setLevel(newLevel) {
+        level = newLevel;
+        secondsElapsed = 0;
+        lastSecUpdated = -1;
+        obstacles = [];
+        farts = [];
+        tunnelRects = [];
+        boss = null;
+        hballsPerSec = 0;
+        iballsPerSec = 0;
+        dachsHit = false;
+        dachsVisible = true;
+
+        if (newLevel <= 1) {
+            invincibleBall = false;
+            invincibleHit = false;
+            balls = [];
+        }
+
+        document.getElementById('levelDisplay').textContent = Math.min(level, 5);
+
+        // Victory!
+        if (level === 6) {
+            setTimeout(() => {
+                gameState = 'victory';
+                document.getElementById('victoryOverlay').classList.remove('hidden');
+            }, 3000);
+        }
+    }
+
+    function progressLevel(dt) {
+        secondsElapsed += dt;
+        const seconds = Math.floor(secondsElapsed);
+        if (seconds <= lastSecUpdated) return;
+
+        if (level === 1) {
+            switch (seconds) {
+                case 1:
+                    showInstruction('Make Noise to Fart Yourself Upwards!', 2);
+                    lastSecUpdated = seconds;
+                    break;
+                case 4:
+                    showInstruction('Catch tennis balls for health', 2);
+                    hballsPerSec = 0.2;
+                    iballsPerSec = 0.2;
+                    lastSecUpdated = seconds;
+                    break;
+                case 7:
+                    showInstruction('Dodge everything else to survive', 2);
+                    createObstacle('spaceship', MOVE_HORIZONTAL, 9999, 0.5);
+                    createObstacle('spaceship', MOVE_DIAGONAL, 9999, 0.6);
+                    lastSecUpdated = seconds;
+                    break;
+                case 16:
+                    obstacles.forEach(o => o.lives = 1);
+                    lastSecUpdated = seconds;
+                    break;
+                case 18:
+                    createPig();
+                    lastSecUpdated = seconds;
+                    break;
+                case 20:
+                    hballsPerSec = 0;
+                    iballsPerSec = 0.1;
+                    showInstruction('Kill it with your farts!', 2);
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        } else if (level === 2) {
+            switch (seconds) {
+                case 2:
+                    showInstruction('Level 2', 2);
+                    lastSecUpdated = seconds;
+                    break;
+                case 4:
+                    hballsPerSec = 0.2;
+                    iballsPerSec = 0.2;
+                    addTunnelSection(3, 0.95);
+                    lastSecUpdated = seconds;
+                    break;
+                case 9:
+                    addTunnelSection(1, 0.8);
+                    lastSecUpdated = seconds;
+                    break;
+                case 11:
+                    addTunnelSection(2, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 15:
+                    hballsPerSec = 0;
+                    createHoming();
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        } else if (level === 3) {
+            switch (seconds) {
+                case 2:
+                    showInstruction('Level 3', 2);
+                    hballsPerSec = 0.5;
+                    iballsPerSec = 0.3;
+                    lastSecUpdated = seconds;
+                    break;
+                case 3:
+                    createObstacle('spaceship', MOVE_DIAGONAL, 999, 1);
+                    lastSecUpdated = seconds;
+                    break;
+                case 5:
+                    addTunnelSection(0.5, 0.7);
+                    lastSecUpdated = seconds;
+                    break;
+                case 7:
+                    addTunnelSection(2, 0.85);
+                    lastSecUpdated = seconds;
+                    break;
+                case 13:
+                    addTunnelSection(4, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 18:
+                    createBossDachs();
+                    lastSecUpdated = seconds;
+                    break;
+                case 20:
+                    obstacles.forEach(o => o.lives = 1);
+                    hballsPerSec = 0;
+                    iballsPerSec = 0.1;
+                    addTunnelSection(7, 0.95);
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        } else if (level === 4) {
+            switch (seconds) {
+                case 2:
+                    hballsPerSec = 0.4;
+                    iballsPerSec = 0.2;
+                    showInstruction('Level 4', 2);
+                    lastSecUpdated = seconds;
+                    break;
+                case 4: case 5: case 6:
+                    createObstacle('bird', MOVE_SWIRL, 10, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 11:
+                    addTunnelSection(1, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 13:
+                    obstacles.forEach(o => o.lives = 1);
+                    lastSecUpdated = seconds;
+                    break;
+                case 15:
+                    showInstruction('Abra Cadabra!', 1);
+                    createMagician();
+                    hballsPerSec = 0;
+                    iballsPerSec = 0.1;
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        } else if (level === 5) {
+            switch (seconds) {
+                case 2:
+                    hballsPerSec = 0.2;
+                    iballsPerSec = 0.2;
+                    showInstruction('Level 5 - Final Boss!', 2);
+                    lastSecUpdated = seconds;
+                    break;
+                case 4:
+                    createObstacle('bird', MOVE_SWIRL, 3, 0.6);
+                    lastSecUpdated = seconds;
+                    break;
+                case 5:
+                    addTunnelSection(2, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 7: case 10:
+                    createObstacle('spaceship', MOVE_OSCILLATE, 5, 0.5);
+                    lastSecUpdated = seconds;
+                    break;
+                case 13:
+                    addTunnelSection(1, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+                case 16:
+                    addTunnelSection(0.25, 0.7);
+                    lastSecUpdated = seconds;
+                    break;
+                case 18:
+                    showInstruction('Final Boss!', 1.5);
+                    lastSecUpdated = seconds;
+                    break;
+                case 20:
+                    createShooter();
+                    lastSecUpdated = seconds;
+                    break;
+                case 26: case 30: case 34: case 38:
+                    addTunnelSection(0.3, 0.9);
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        } else if (level === 6) {
+            switch (seconds) {
+                case 3:
+                    showInstruction('Victory!', 2);
+                    lastSecUpdated = seconds;
+                    break;
+            }
+        }
+    }
+
+    // ==================== UI ====================
+    function updateHeartsDisplay() {
+        const display = document.getElementById('heartsDisplay');
+        let html = '';
+        for (let i = 0; i < hearts; i++) {
+            html += '<span style="color:#F44;">&#10084;</span>';
+        }
+        display.innerHTML = html;
+    }
+
+    function showInstruction(text, duration) {
+        instructionText = text;
+        instructionTimeLeft = duration;
+        const box = document.getElementById('instructionBox');
+        box.textContent = text;
+        box.classList.remove('hidden');
+    }
+
+    function updateInstructions(dt) {
+        if (instructionTimeLeft > 0) {
+            instructionTimeLeft -= dt;
+            if (instructionTimeLeft <= 0) {
+                document.getElementById('instructionBox').classList.add('hidden');
+            }
+        }
+    }
+
+    // ==================== AUDIO ====================
+    async function initAudio() {
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            microphone = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.3;
+
+            microphone.connect(analyser);
+
+            micReady = true;
+            controlMode = 'mic';
+            document.getElementById('micStatus').textContent = 'Microphone ready!';
+            document.getElementById('micStatus').style.color = '#4f4';
+
+            document.getElementById('introOverlay').classList.add('hidden');
+            document.getElementById('readyOverlay').classList.remove('hidden');
+            document.getElementById('controlHint').textContent = 'Make noise to fly!';
+            document.getElementById('volumeMeter').style.display = 'flex';
+
+        } catch (err) {
+            document.getElementById('micStatus').textContent = 'Mic denied! Try tap mode.';
+            document.getElementById('micStatus').style.color = '#f44';
+        }
+    }
+
+    function getVolumeLevel() {
+        if (!analyser) return 0;
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteTimeDomainData(dataArray);
+
+        // Calculate RMS (similar to Android version)
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            const sample = (dataArray[i] - 128) / 128;
+            sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+
+        // Scale to match Android's volume range (roughly)
+        return Math.min(rms * 3000, 4000);
+    }
+
+    // ==================== GAME LOOP ====================
+    let lastTime = 0;
+
+    function gameLoop(currentTime) {
+        const dt = Math.min((currentTime - lastTime) / 1000, 0.1);
+        lastTime = currentTime;
+
+        // Update volume
+        if (controlMode === 'mic' && micReady) {
+            volumeLevel = getVolumeLevel();
+            document.getElementById('volumeBar').style.width = Math.min(100, volumeLevel / 20) + '%';
+        } else if (controlMode === 'tap') {
+            volumeLevel = isTapping ? 500 : 0;
+        }
+
+        // Clear
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Always update and draw stars
+        updateStars(dt);
+        drawStars();
+
+        if (gameState === 'playing' && !paused) {
+            // Update game objects
+            progressLevel(dt);
+            updateDachshund(dt, volumeLevel);
+            updateFarts(dt, volumeLevel);
+            updateObstacles(dt);
+            updateTunnels(dt);
+            updateBalls(dt);
+            updateBoss(dt);
+            checkBallCollection();
+            handleDachsHit();
+            updateInstructions(dt);
+        }
+
+        // Draw game objects
+        if (gameState === 'playing' || gameState === 'gameover' || gameState === 'victory') {
+            drawTunnels();
+            drawObstacles();
+            drawBalls();
+            drawFarts();
+            drawBoss();
+            drawDachshund();
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ==================== EVENT HANDLERS ====================
+    document.getElementById('micBtn').addEventListener('click', initAudio);
+
+    document.getElementById('tapBtn').addEventListener('click', () => {
+        controlMode = 'tap';
+        document.getElementById('introOverlay').classList.add('hidden');
+        document.getElementById('readyOverlay').classList.remove('hidden');
+        document.getElementById('controlHint').textContent = 'Tap/hold screen to fly!';
+        document.getElementById('volumeMeter').style.display = 'none';
+    });
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+        document.getElementById('readyOverlay').classList.add('hidden');
+        gameState = 'playing';
+        resetDachshund();
+        setLevel(1);
+        hearts = CONFIG.START_HEARTS;
+        updateHeartsDisplay();
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+        document.getElementById('gameOverOverlay').classList.add('hidden');
+        gameState = 'playing';
+        resetDachshund();
+        setLevel(1);
+        hearts = CONFIG.START_HEARTS;
+        updateHeartsDisplay();
+    });
+
+    document.getElementById('victoryRestartBtn').addEventListener('click', () => {
+        document.getElementById('victoryOverlay').classList.add('hidden');
+        gameState = 'playing';
+        resetDachshund();
+        setLevel(1);
+        hearts = CONFIG.START_HEARTS;
+        updateHeartsDisplay();
+    });
+
+    // Settings
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+        document.getElementById('calibrationPanel').classList.toggle('hidden');
+    });
+
+    document.getElementById('closeSettings').addEventListener('click', () => {
+        document.getElementById('calibrationPanel').classList.add('hidden');
+    });
+
+    document.getElementById('sensSlider').addEventListener('input', (e) => {
+        sensitivity = parseFloat(e.target.value);
+        document.getElementById('sensValue').textContent = sensitivity.toFixed(1);
+        localStorage.setItem('spacedog_sensitivity', sensitivity);
+    });
+
+    document.getElementById('gravSlider').addEventListener('input', (e) => {
+        gravity = parseFloat(e.target.value);
+        document.getElementById('gravValue').textContent = gravity.toFixed(1);
+        localStorage.setItem('spacedog_gravity', gravity);
+    });
+
+    document.getElementById('threshSlider').addEventListener('input', (e) => {
+        threshold = parseInt(e.target.value);
+        document.getElementById('threshValue').textContent = threshold;
+        localStorage.setItem('spacedog_threshold', threshold);
+    });
+
+    // Load saved settings
+    document.getElementById('sensSlider').value = sensitivity;
+    document.getElementById('sensValue').textContent = sensitivity.toFixed(1);
+    document.getElementById('gravSlider').value = gravity;
+    document.getElementById('gravValue').textContent = gravity.toFixed(1);
+    document.getElementById('threshSlider').value = threshold;
+    document.getElementById('threshValue').textContent = threshold;
+
+    // Tap controls
+    canvas.addEventListener('touchstart', (e) => {
+        if (gameState === 'playing' && controlMode === 'tap') {
+            isTapping = true;
+            e.preventDefault();
+        }
+    });
+
+    canvas.addEventListener('touchend', () => { isTapping = false; });
+    canvas.addEventListener('mousedown', () => { if (gameState === 'playing' && controlMode === 'tap') isTapping = true; });
+    canvas.addEventListener('mouseup', () => { isTapping = false; });
+    canvas.addEventListener('mouseleave', () => { isTapping = false; });
+
+    // Prevent scrolling
+    document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+    // ==================== INITIALIZE ====================
+    loadImages(() => {
+        initStars();
+        resetDachshund();
+        updateHeartsDisplay();
+        requestAnimationFrame(gameLoop);
+    });
+    </script>
+</body>
+</html>

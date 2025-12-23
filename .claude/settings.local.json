@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr:*)",
+      "Bash(del:*)",
+      "Bash(done)",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\dachshund1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\dachshund4hit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\dachsflipped.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\dachsflippedhit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\pig1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\pig_hit1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\pixel_cat1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\pixel_cat1hit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\rabbit1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\rabbit1hit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\shuttlestationary.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\shuttlemoving.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\shuttlestationaryhit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\shuttlemovinghit.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\spaceship1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\bird2.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\bullet.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\heart1.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\tennis_ball2.png''\\)\\)\")"
+    ]
+  }
+}
