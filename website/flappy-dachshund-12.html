@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Bark to Fly! - Voice Controlled Dachshund</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #gameCanvas {
+            flex: 1;
+            width: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .ui-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            z-index: 100;
+        }
+
+        .calibration-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 120px;
+            padding: 8px 12px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            background: rgba(255, 215, 0, 0.3);
+            color: #FFD700;
+            border: 1px solid #FFD700;
+            cursor: pointer;
+            z-index: 150;
+        }
+
+        .calibration-panel {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.95);
+            border: 3px solid #FFD700;
+            padding: 24px;
+            z-index: 160;
+            width: 280px;
+        }
+
+        @media (orientation: landscape) {
+            .calibration-panel {
+                width: 400px;
+            }
+        }
+
+        .calibration-panel h3 {
+            color: #FFD700;
+            font-size: 14px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .slider-group {
+            margin-bottom: 24px;
+        }
+
+        .slider-label {
+            color: #aaa;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .slider-value {
+            color: #8f8;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 36px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            outline: none;
+            cursor: pointer;
+            touch-action: pan-x;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 16px;
+            background: #333;
+            border: 2px solid #555;
+            border-radius: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 32px;
+            height: 32px;
+            background: #FFD700;
+            cursor: pointer;
+            margin-top: -10px;
+            border-radius: 0;
+        }
+
+        input[type="range"]::-moz-range-track {
+            width: 100%;
+            height: 16px;
+            background: #333;
+            border: 2px solid #555;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 32px;
+            height: 32px;
+            background: #FFD700;
+            cursor: pointer;
+            border: none;
+            border-radius: 0;
+        }
+
+        input[type="range"]:active::-webkit-slider-thumb {
+            background: #FFF;
+        }
+
+        input[type="range"]:active::-moz-range-thumb {
+            background: #FFF;
+        }
+
+        .score-display {
+            color: #FFD700;
+            font-size: 10px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .hearts-display {
+            font-size: 16px;
+            text-shadow: 2px 2px 0 #000;
+            color: #FFD700;
+        }
+
+        .invincible-indicator {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #FFF;
+            font-size: 12px;
+            text-shadow: 0 0 10px #FFF, 0 0 20px #FF0, 0 0 30px #F0F;
+            animation: rainbow 0.5s linear infinite;
+            z-index: 100;
+        }
+
+        @keyframes rainbow {
+            0% { color: #FF0000; }
+            17% { color: #FF7F00; }
+            33% { color: #FFFF00; }
+            50% { color: #00FF00; }
+            67% { color: #0000FF; }
+            83% { color: #8B00FF; }
+            100% { color: #FF0000; }
+        }
+
+        .volume-meter {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .volume-label {
+            color: #88f;
+            font-size: 8px;
+        }
+
+        .volume-bar-container {
+            width: 80px;
+            height: 12px;
+            background: #222;
+            border: 2px solid #444;
+            overflow: hidden;
+        }
+
+        .volume-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4a4, #8f8);
+            transition: width 0.05s;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #FFD700;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 20px;
+        }
+
+        .overlay h1 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 0 #000;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .overlay p {
+            font-size: 8px;
+            margin-bottom: 12px;
+            color: #aaa;
+            line-height: 2;
+        }
+
+        .start-btn {
+            margin-top: 20px;
+            padding: 16px 32px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background: #FFD700;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .start-btn:hover, .start-btn:active {
+            transform: scale(1.1);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .game-over-overlay h1 {
+            color: #f44;
+        }
+
+        .restart-btn {
+            margin-top: 20px;
+            padding: 16px 32px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            background: #FFD700;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .restart-btn:hover, .restart-btn:active {
+            transform: scale(1.1);
+        }
+
+        .mic-status {
+            font-size: 8px;
+            color: #666;
+            margin-top: 16px;
+        }
+
+        .mic-status.active {
+            color: #4a4;
+        }
+
+        .mic-status.error {
+            color: #f44;
+        }
+
+        .fullscreen-btn {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 8px 12px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            background: rgba(255, 215, 0, 0.3);
+            color: #FFD700;
+            border: 1px solid #FFD700;
+            cursor: pointer;
+            z-index: 150;
+        }
+
+        .tap-btn {
+            background: #8f8;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="ui-bar">
+            <div class="score-display">SCORE: <span id="score">0</span></div>
+            <div class="hearts-display" id="heartsDisplay">❤️❤️❤️</div>
+            <div class="volume-meter" id="volumeMeter">
+                <span class="volume-label">MIC</span>
+                <div class="volume-bar-container">
+                    <div class="volume-bar" id="volumeBar"></div>
+                </div>
+            </div>
+            <div class="score-display">BEST: <span id="highScore">0</span></div>
+        </div>
+        
+        <canvas id="gameCanvas"></canvas>
+        
+        <div class="invincible-indicator hidden" id="invincibleIndicator">⭐ INVINCIBLE ⭐</div>
+        
+        <button class="fullscreen-btn" id="fullscreenBtn">FULLSCREEN</button>
+        
+        <button class="calibration-btn" id="calibrationBtn">⚙️ SETTINGS</button>
+        
+        <div class="calibration-panel hidden" id="calibrationPanel">
+            <h3>CALIBRATION</h3>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>GRAVITY</span>
+                    <span class="slider-value" id="gravityValue">0.15</span>
+                </div>
+                <input type="range" id="gravitySlider" min="0.05" max="0.4" step="0.01" value="0.15">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label">
+                    <span>LIFT POWER</span>
+                    <span class="slider-value" id="liftValue">0.6</span>
+                </div>
+                <input type="range" id="liftSlider" min="0.1" max="1.5" step="0.05" value="0.6">
+            </div>
+        </div>
+
+        <div class="overlay" id="controlOverlay">
+            <h1>🌭 BARK TO FLY! 🌭</h1>
+            <p>Keep Lochsie the Dachshund flying!</p>
+            <p>Choose your control:</p>
+            <div class="button-group">
+                <button class="start-btn" id="micBtn">🎤 USE MICROPHONE</button>
+                <button class="start-btn tap-btn" id="tapBtn">👆 TAP TO FLY</button>
+            </div>
+            <p class="mic-status" id="micStatus"></p>
+        </div>
+        
+        <div class="overlay hidden" id="startOverlay">
+            <h1>🌭 READY! 🌭</h1>
+            <p id="controlHint">Make noise to fly!</p>
+            <button class="start-btn" id="playBtn">TAP TO START</button>
+        </div>
+
+        <div class="overlay hidden" id="gameOverOverlay">
+            <h1>GAME OVER</h1>
+            <p>Lochsie crashed!</p>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button class="restart-btn" id="restartBtn">BARK AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const volumeBar = document.getElementById('volumeBar');
+        const volumeMeter = document.getElementById('volumeMeter');
+        const scoreDisplay = document.getElementById('score');
+        const highScoreDisplay = document.getElementById('highScore');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const controlOverlay = document.getElementById('controlOverlay');
+        const startOverlay = document.getElementById('startOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const controlHint = document.getElementById('controlHint');
+        const micStatus = document.getElementById('micStatus');
+        const micBtn = document.getElementById('micBtn');
+        const tapBtn = document.getElementById('tapBtn');
+        const playBtn = document.getElementById('playBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+        // Resize canvas to fill screen
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Game state
+        let gameState = 'control'; // 'control', 'start', 'playing', 'gameover'
+        let controlMode = 'mic'; // 'mic' or 'tap'
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('dachshundHighScore') || '0');
+        highScoreDisplay.textContent = highScore;
+
+        // Audio
+        let audioContext;
+        let analyser;
+        let microphone;
+        let volumeLevel = 0;
+        let micReady = false;
+
+        // Tap control
+        let isTapping = false;
+
+        // Health system
+        let hearts = 10;
+        const heartsDisplay = document.getElementById('heartsDisplay');
+        const invincibleIndicator = document.getElementById('invincibleIndicator');
+        let invincible = false;
+        let invincibleTimer = 0;
+        let damageFlash = 0;
+
+        // Collectibles
+        let tennisBalls = [];
+        let rainbowBalls = [];
+        let tennisBallTimer = 0;
+        let rainbowBallTimer = 0;
+        const TENNIS_BALL_INTERVAL = 300; // Spawn every ~5 seconds
+        const RAINBOW_BALL_INTERVAL = 900; // Spawn every ~15 seconds
+
+        // Sound effects
+        let gameAudioContext = null;
+        
+        function playBarkSound() {
+            try {
+                if (!gameAudioContext) {
+                    gameAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const ctx = gameAudioContext;
+                const now = ctx.currentTime;
+                
+                // Quick quiet bark - short burst of noise shaped like a small dog bark
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const filter = ctx.createBiquadFilter();
+                
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(250, now + 0.05);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.1);
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 800;
+                
+                gain.gain.setValueAtTime(0.08, now); // Quiet
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.start(now);
+                osc.stop(now + 0.12);
+                
+            } catch (e) {
+                // Audio not supported, fail silently
+            }
+        }
+        
+        function playPowerUpSound() {
+            try {
+                if (!gameAudioContext) {
+                    gameAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const ctx = gameAudioContext;
+                const now = ctx.currentTime;
+                
+                // Create ascending arpeggio
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    
+                    gain.gain.setValueAtTime(0.3, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.3);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.35);
+                });
+                
+                // Add a shimmer
+                const shimmer = ctx.createOscillator();
+                const shimmerGain = ctx.createGain();
+                shimmer.type = 'triangle';
+                shimmer.frequency.value = 1568; // G6
+                shimmerGain.gain.setValueAtTime(0.2, now + 0.3);
+                shimmerGain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                shimmer.connect(shimmerGain);
+                shimmerGain.connect(ctx.destination);
+                shimmer.start(now + 0.3);
+                shimmer.stop(now + 0.85);
+                
+            } catch (e) {
+                // Audio not supported, fail silently
+            }
+        }
+        
+        function playExplosionSound() {
+            try {
+                if (!gameAudioContext) {
+                    gameAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const ctx = gameAudioContext;
+                const now = ctx.currentTime;
+                
+                // Create noise burst for explosion
+                const bufferSize = ctx.sampleRate * 0.3;
+                const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufferSize, 2);
+                }
+                
+                const noise = ctx.createBufferSource();
+                noise.buffer = buffer;
+                
+                const noiseGain = ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.15, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                
+                const filter = ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1000, now);
+                filter.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+                
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
+                
+                noise.start(now);
+                noise.stop(now + 0.35);
+                
+                // Add a low thump
+                const osc = ctx.createOscillator();
+                const oscGain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                oscGain.gain.setValueAtTime(0.2, now);
+                oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                
+                osc.connect(oscGain);
+                oscGain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+                
+            } catch (e) {
+                // Audio not supported, fail silently
+            }
+        }
+
+        // Physics (adjustable)
+        let gravity = 0.15;
+        let liftPower = 0.6;
+        const VOLUME_THRESHOLD = 15;
+
+        // Dachshund (pixel art data)
+        const dachshund = {
+            x: 100,
+            y: 250,
+            width: 64,
+            height: 32,
+            velocity: 0,
+            rotation: 0
+        };
+
+        // Asteroids
+        let asteroids = [];
+        let asteroidTimer = 0;
+        let asteroidSpawnInterval = 180; // Frames between spawns
+        
+        // Difficulty progression
+        let maxAsteroidSize = 0.30; // Start at 30% of screen (2x bigger)
+        let maxAsteroidSpeed = 0.12; // Start at 12% of screen per second (1.5x faster)
+        let maxAsteroidsOnScreen = 1;
+
+        // Stars
+        let stars = [];
+        const STAR_COUNT = 150;
+
+        // Sparkle trail
+        let sparkles = [];
+
+        // Explosions
+        let explosions = [];
+
+        // Boss system
+        let boss = null;
+        let bossTimer = 0;
+        const BOSS_SPAWN_TIME = 15 * 60; // 15 seconds at 60fps
+        let bossDefeated = false;
+
+        // Initialize stars
+        function initStars() {
+            stars = [];
+            for (let i = 0; i < STAR_COUNT; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() < 0.8 ? 1 : 2,
+                    speed: 0.6 + Math.random() * 1.2,
+                    twinkle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Draw pixel art dachshund
+        function drawDachshund() {
+            ctx.save();
+            ctx.translate(dachshund.x + dachshund.width / 2, dachshund.y + dachshund.height / 2);
+            
+            // Flip horizontally so dog faces right
+            ctx.scale(-1, 1);
+            
+            // Rotate based on velocity
+            dachshund.rotation = Math.max(-0.5, Math.min(0.5, -dachshund.velocity * 0.05));
+            ctx.rotate(dachshund.rotation);
+            
+            const px = 2; // Pixel size
+            const offsetX = -dachshund.width / 2;
+            const offsetY = -dachshund.height / 2;
+
+            // Lighter yellow/cream color palette
+            const bodyColor = '#F0D060';
+            const darkBody = '#D4B84A';
+            const lightBody = '#FFF0A0';
+            const noseColor = '#2A1A0A';
+            const eyeColor = '#1A0A00';
+            const tongueColor = '#E85A7A';
+            const earColor = '#E8C850';
+            const collarColor = '#E74C3C';
+
+            // Body (thinner - 6px height instead of 8)
+            ctx.fillStyle = bodyColor;
+            for (let i = 6; i < 28; i++) {
+                ctx.fillRect(offsetX + i * px, offsetY + 8 * px, px, 6 * px);
+            }
+            
+            // Body shading top
+            ctx.fillStyle = lightBody;
+            for (let i = 8; i < 26; i++) {
+                ctx.fillRect(offsetX + i * px, offsetY + 8 * px, px, 2 * px);
+            }
+            
+            // Body shading bottom
+            ctx.fillStyle = darkBody;
+            for (let i = 8; i < 26; i++) {
+                ctx.fillRect(offsetX + i * px, offsetY + 12 * px, px, 2 * px);
+            }
+
+            // Head (moved up slightly)
+            ctx.fillStyle = bodyColor;
+            for (let i = 2; i < 8; i++) {
+                ctx.fillRect(offsetX + i * px, offsetY + 5 * px, px, 9 * px);
+            }
+            
+            // Longer snout
+            ctx.fillStyle = lightBody;
+            ctx.fillRect(offsetX + 0 * px, offsetY + 7 * px, px * 3, px * 4);
+            ctx.fillRect(offsetX - 1 * px, offsetY + 8 * px, px * 2, px * 2);
+            
+            // Nose
+            ctx.fillStyle = noseColor;
+            ctx.fillRect(offsetX - 1 * px, offsetY + 8 * px, px, px * 2);
+            
+            // Eye
+            ctx.fillStyle = eyeColor;
+            ctx.fillRect(offsetX + 4 * px, offsetY + 6 * px, px * 2, px * 2);
+            
+            // Eye shine
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(offsetX + 4 * px, offsetY + 6 * px, px, px);
+
+            // Ear
+            ctx.fillStyle = earColor;
+            ctx.fillRect(offsetX + 6 * px, offsetY + 3 * px, px * 3, px * 3);
+            ctx.fillRect(offsetX + 7 * px, offsetY + 2 * px, px * 2, px);
+
+            // Tongue (visible when making noise)
+            if (volumeLevel > VOLUME_THRESHOLD) {
+                ctx.fillStyle = tongueColor;
+                ctx.fillRect(offsetX + 0 * px, offsetY + 12 * px, px * 2, px * 2);
+                ctx.fillRect(offsetX - 1 * px, offsetY + 13 * px, px, px);
+            }
+
+            // Collar
+            ctx.fillStyle = collarColor;
+            ctx.fillRect(offsetX + 7 * px, offsetY + 9 * px, px * 2, px * 4);
+            
+            // Collar tag
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(offsetX + 8 * px, offsetY + 11 * px, px, px * 2);
+
+            // Tail
+            ctx.fillStyle = bodyColor;
+            ctx.fillRect(offsetX + 28 * px, offsetY + 7 * px, px * 2, px * 3);
+            ctx.fillRect(offsetX + 29 * px, offsetY + 6 * px, px * 2, px * 2);
+            
+            // Tail wag animation
+            const wagOffset = Math.sin(Date.now() / 100) * 2;
+            ctx.fillRect(offsetX + 30 * px, offsetY + (5 + wagOffset) * px, px, px * 2);
+
+            // Legs (thinner)
+            ctx.fillStyle = darkBody;
+            // Front legs
+            ctx.fillRect(offsetX + 9 * px, offsetY + 13 * px, px * 2, px * 3);
+            ctx.fillRect(offsetX + 13 * px, offsetY + 13 * px, px * 2, px * 3);
+            // Back legs
+            ctx.fillRect(offsetX + 22 * px, offsetY + 13 * px, px * 2, px * 3);
+            ctx.fillRect(offsetX + 25 * px, offsetY + 13 * px, px * 2, px * 3);
+            
+            // Paws
+            ctx.fillStyle = '#5A4A3A';
+            ctx.fillRect(offsetX + 9 * px, offsetY + 15 * px, px * 2, px);
+            ctx.fillRect(offsetX + 13 * px, offsetY + 15 * px, px * 2, px);
+            ctx.fillRect(offsetX + 22 * px, offsetY + 15 * px, px * 2, px);
+            ctx.fillRect(offsetX + 25 * px, offsetY + 15 * px, px * 2, px);
+
+            ctx.restore();
+        }
+
+        // Draw tennis ball
+        function drawTennisBall(ball) {
+            const px = 4;
+            const x = ball.x;
+            const y = ball.y;
+            
+            // Green ball
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(x + px, y, px * 4, px * 6);
+            ctx.fillRect(x, y + px, px * 6, px * 4);
+            
+            // Darker green shading
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(x + px * 4, y + px, px, px * 4);
+            ctx.fillRect(x + px, y + px * 4, px * 4, px);
+            
+            // White seam
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + px * 2, y, px * 2, px);
+            ctx.fillRect(x + px * 2, y + px * 5, px * 2, px);
+        }
+
+        // Draw rainbow ball
+        function drawRainbowBall(ball) {
+            const px = 4;
+            const x = ball.x;
+            const y = ball.y;
+            const time = Date.now() / 100;
+            
+            // Flashing rainbow colors
+            const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF'];
+            const colorIndex = Math.floor(time) % colors.length;
+            
+            ctx.fillStyle = colors[colorIndex];
+            ctx.fillRect(x + px, y, px * 4, px * 6);
+            ctx.fillRect(x, y + px, px * 6, px * 4);
+            
+            // Sparkle effect
+            ctx.fillStyle = '#FFF';
+            const sparkle = Math.sin(time * 2) > 0;
+            if (sparkle) {
+                ctx.fillRect(x + px * 2, y + px * 2, px, px);
+                ctx.fillRect(x + px * 3, y + px * 3, px, px);
+            }
+        }
+
+        // Spawn tennis ball
+        function spawnTennisBall() {
+            tennisBalls.push({
+                x: canvas.width,
+                y: Math.random() * (canvas.height - 50) + 25,
+                speed: 2.5 + Math.random() * 1.5
+            });
+        }
+
+        // Spawn rainbow ball
+        function spawnRainbowBall() {
+            rainbowBalls.push({
+                x: canvas.width,
+                y: Math.random() * (canvas.height - 50) + 25,
+                speed: 2 + Math.random() * 1.5
+            });
+        }
+
+        // Update balls
+        function updateBalls() {
+            // Tennis balls
+            tennisBallTimer++;
+            if (tennisBallTimer >= TENNIS_BALL_INTERVAL) {
+                spawnTennisBall();
+                tennisBallTimer = 0;
+            }
+            
+            tennisBalls.forEach(ball => {
+                ball.x -= ball.speed;
+            });
+            tennisBalls = tennisBalls.filter(ball => ball.x > -20);
+            
+            // Rainbow balls
+            rainbowBallTimer++;
+            if (rainbowBallTimer >= RAINBOW_BALL_INTERVAL) {
+                spawnRainbowBall();
+                rainbowBallTimer = 0;
+            }
+            
+            rainbowBalls.forEach(ball => {
+                ball.x -= ball.speed;
+            });
+            rainbowBalls = rainbowBalls.filter(ball => ball.x > -20);
+        }
+
+        // Check ball collection
+        function checkBallCollection() {
+            const dogLeft = dachshund.x;
+            const dogRight = dachshund.x + dachshund.width;
+            const dogTop = dachshund.y;
+            const dogBottom = dachshund.y + dachshund.height;
+            
+            // Check tennis balls (bigger hitbox now)
+            tennisBalls = tennisBalls.filter(ball => {
+                const ballRight = ball.x + 24;
+                const ballBottom = ball.y + 24;
+                
+                if (dogRight > ball.x && dogLeft < ballRight &&
+                    dogBottom > ball.y && dogTop < ballBottom) {
+                    // Collected! Restore heart (no max limit)
+                    hearts++;
+                    updateHeartsDisplay();
+                    playBarkSound();
+                    return false;
+                }
+                return true;
+            });
+            
+            // Check rainbow balls (bigger hitbox now)
+            rainbowBalls = rainbowBalls.filter(ball => {
+                const ballRight = ball.x + 24;
+                const ballBottom = ball.y + 24;
+                
+                if (dogRight > ball.x && dogLeft < ballRight &&
+                    dogBottom > ball.y && dogTop < ballBottom) {
+                    // Collected! Become invincible
+                    invincible = true;
+                    invincibleTimer = 600; // 10 seconds at 60fps
+                    invincibleIndicator.classList.remove('hidden');
+                    playPowerUpSound();
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // Update hearts display
+        function updateHeartsDisplay() {
+            if (hearts <= 10) {
+                heartsDisplay.textContent = '❤️'.repeat(hearts);
+            } else {
+                heartsDisplay.textContent = '❤️ x' + hearts;
+            }
+        }
+
+        // Draw stars
+        function drawStars() {
+            stars.forEach(star => {
+                const twinkle = Math.sin(Date.now() / 200 + star.twinkle) * 0.3 + 0.7;
+                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
+                ctx.fillRect(Math.floor(star.x), Math.floor(star.y), star.size, star.size);
+            });
+        }
+
+        // Update stars
+        function updateStars() {
+            stars.forEach(star => {
+                star.x -= star.speed;
+                if (star.x < -2) {
+                    star.x = canvas.width + 2;
+                    star.y = Math.random() * canvas.height;
+                }
+            });
+        }
+
+        // Emit sparkles from dog's tail
+        function emitSparkles() {
+            if (gameState !== 'playing') return;
+            
+            // Emit 1-2 sparkles per frame
+            const count = Math.random() < 0.5 ? 1 : 2;
+            for (let i = 0; i < count; i++) {
+                const sparkleColors = invincible 
+                    ? ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF']
+                    : ['#FFD700', '#FFF8DC', '#FFFACD', '#F0E68C'];
+                
+                sparkles.push({
+                    x: dachshund.x - 2,
+                    y: dachshund.y + dachshund.height / 2 + 4 + (Math.random() - 0.5) * 10,
+                    vx: -1 - Math.random() * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    size: 2 + Math.random() * 3,
+                    life: 1,
+                    decay: 0,
+                    color: sparkleColors[Math.floor(Math.random() * sparkleColors.length)]
+                });
+            }
+        }
+
+        // Update sparkles
+        function updateSparkles() {
+            sparkles.forEach(s => {
+                s.x += s.vx;
+                s.y += s.vy;
+            });
+            // Remove only when off screen to the left
+            sparkles = sparkles.filter(s => s.x > -10);
+        }
+
+        // Draw sparkles
+        function drawSparkles() {
+            sparkles.forEach(s => {
+                ctx.fillStyle = s.color;
+                
+                // Draw as small diamond/star shape
+                const px = Math.floor(s.size);
+                ctx.fillRect(s.x, s.y - px/2, px, px);
+                ctx.fillRect(s.x - px/2, s.y, px, px/2);
+                ctx.fillRect(s.x + px/2, s.y, px, px/2);
+            });
+        }
+
+        // Create explosion at position
+        function createExplosion(x, y, size) {
+            const particleCount = Math.floor(size / 3) + 10;
+            const colors = ['#A0A0A0', '#C8C8C8', '#808080', '#FF6600', '#FF8833', '#FFAA00'];
+            
+            for (let i = 0; i < particleCount; i++) {
+                const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+                const speed = 2 + Math.random() * 4;
+                
+                explosions.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 3 + Math.random() * (size / 10),
+                    life: 1,
+                    decay: 0.02 + Math.random() * 0.02,
+                    color: colors[Math.floor(Math.random() * colors.length)]
+                });
+            }
+        }
+
+        // Update explosions
+        function updateExplosions() {
+            explosions.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.96;
+                p.vy *= 0.96;
+                p.life -= p.decay;
+                p.size *= 0.97;
+            });
+            explosions = explosions.filter(p => p.life > 0);
+        }
+
+        // Draw explosions
+        function drawExplosions() {
+            explosions.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                const px = Math.floor(p.size);
+                ctx.fillRect(p.x - px/2, p.y - px/2, px, px);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        // Spawn pig boss
+        function spawnBoss() {
+            boss = {
+                x: canvas.width - 80,
+                y: canvas.height / 2,
+                width: 80,
+                height: 70,
+                health: 100,
+                maxHealth: 100,
+                baseX: canvas.width - 80,
+                targetX: canvas.width - 80,
+                oscillateSpeed: 0.008, // Much slower vertical oscillation
+                oscillateAmount: canvas.height * 0.25,
+                oscillateOffset: 0,
+                lockedY: null, // Lock Y position during horizontal movement
+                state: 'idle', // 'idle', 'charging', 'returning'
+                chargeTimer: Math.random() * 180 + 120, // 2-5 seconds
+                damageFlash: 0
+            };
+        }
+
+        // Draw pig boss
+        function drawBoss() {
+            if (!boss) return;
+            
+            const x = boss.x;
+            const y = boss.y;
+            const px = 4;
+            
+            ctx.save();
+            
+            // Flash when damaged
+            if (boss.damageFlash > 0) {
+                ctx.globalAlpha = 0.5 + Math.sin(boss.damageFlash * 0.5) * 0.3;
+            }
+            
+            // Body - pink
+            ctx.fillStyle = '#FFB6C1';
+            ctx.fillRect(x - 35, y - 25, 70, 50);
+            ctx.fillRect(x - 30, y - 30, 60, 60);
+            
+            // Darker pink shading
+            ctx.fillStyle = '#FF9AAA';
+            ctx.fillRect(x - 30, y + 15, 60, 15);
+            ctx.fillRect(x + 20, y - 25, 15, 50);
+            
+            // Snout
+            ctx.fillStyle = '#FFC0CB';
+            ctx.fillRect(x + 30, y - 10, 20, 25);
+            
+            // Nostrils
+            ctx.fillStyle = '#CC8899';
+            ctx.fillRect(x + 40, y - 5, 6, 8);
+            ctx.fillRect(x + 40, y + 5, 6, 8);
+            
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x + 5, y - 15, 8, 10);
+            ctx.fillRect(x - 20, y - 15, 8, 10);
+            
+            // Angry eyebrows
+            ctx.fillStyle = '#8B0000';
+            ctx.fillRect(x + 3, y - 22, 14, 4);
+            ctx.fillRect(x - 24, y - 22, 14, 4);
+            
+            // Eye shine
+            ctx.fillStyle = '#FFF';
+            ctx.fillRect(x + 7, y - 13, 3, 3);
+            ctx.fillRect(x - 18, y - 13, 3, 3);
+            
+            // Ears
+            ctx.fillStyle = '#FFB6C1';
+            ctx.fillRect(x - 35, y - 40, 15, 20);
+            ctx.fillRect(x + 15, y - 40, 15, 20);
+            
+            // Inner ears
+            ctx.fillStyle = '#FF9AAA';
+            ctx.fillRect(x - 32, y - 35, 8, 12);
+            ctx.fillRect(x + 18, y - 35, 8, 12);
+            
+            // Legs
+            ctx.fillStyle = '#FF9AAA';
+            ctx.fillRect(x - 30, y + 25, 12, 15);
+            ctx.fillRect(x - 10, y + 25, 12, 15);
+            ctx.fillRect(x + 8, y + 25, 12, 15);
+            ctx.fillRect(x + 25, y + 25, 12, 15);
+            
+            // Hooves
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - 30, y + 35, 12, 5);
+            ctx.fillRect(x - 10, y + 35, 12, 5);
+            ctx.fillRect(x + 8, y + 35, 12, 5);
+            ctx.fillRect(x + 25, y + 35, 12, 5);
+            
+            // Curly tail
+            ctx.fillStyle = '#FFB6C1';
+            ctx.fillRect(x - 45, y - 5, 10, 8);
+            ctx.fillRect(x - 50, y - 10, 8, 10);
+            ctx.fillRect(x - 45, y - 15, 8, 8);
+            
+            ctx.restore();
+            
+            // Health bar
+            const barWidth = 80;
+            const barHeight = 8;
+            const barX = x - barWidth / 2;
+            const barY = y - 55;
+            
+            ctx.fillStyle = '#333';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+            
+            ctx.fillStyle = '#FF0000';
+            const healthWidth = (boss.health / boss.maxHealth) * (barWidth - 2);
+            ctx.fillRect(barX + 1, barY + 1, healthWidth, barHeight - 2);
+            
+            ctx.fillStyle = '#FF6666';
+            ctx.fillRect(barX + 1, barY + 1, healthWidth, 2);
+        }
+
+        // Update boss
+        function updateBoss() {
+            if (!boss) {
+                // Check if it's time to spawn boss
+                if (!bossDefeated && gameState === 'playing') {
+                    bossTimer++;
+                    if (bossTimer >= BOSS_SPAWN_TIME) {
+                        spawnBoss();
+                    }
+                }
+                return;
+            }
+            
+            // Decrease damage flash
+            if (boss.damageFlash > 0) {
+                boss.damageFlash--;
+            }
+            
+            // State machine for charge attack
+            if (boss.state === 'idle') {
+                // Oscillate up and down only when idle
+                boss.oscillateOffset += boss.oscillateSpeed;
+                const oscillateY = Math.sin(boss.oscillateOffset) * boss.oscillateAmount;
+                const targetY = canvas.height / 2 + oscillateY;
+                
+                // Keep boss on screen
+                boss.y = Math.max(boss.height / 2 + 60, Math.min(canvas.height - boss.height / 2 - 40, targetY));
+                
+                boss.chargeTimer--;
+                boss.x += (boss.targetX - boss.x) * 0.02; // Slower horizontal return
+                
+                if (boss.chargeTimer <= 0) {
+                    boss.state = 'charging';
+                    boss.targetX = 80; // Charge all the way to left side
+                    boss.lockedY = boss.y; // Lock Y position
+                }
+            } else if (boss.state === 'charging') {
+                // Move only horizontally when charging
+                boss.x += (boss.targetX - boss.x) * 0.03; // Slower charge
+                boss.y = boss.lockedY; // Keep Y locked
+                
+                if (Math.abs(boss.x - boss.targetX) < 10) {
+                    boss.state = 'returning';
+                    boss.targetX = canvas.width - 80;
+                }
+            } else if (boss.state === 'returning') {
+                // Move only horizontally when returning
+                boss.x += (boss.targetX - boss.x) * 0.02; // Slower return
+                boss.y = boss.lockedY; // Keep Y locked
+                
+                if (Math.abs(boss.x - boss.targetX) < 10) {
+                    boss.state = 'idle';
+                    boss.chargeTimer = Math.random() * 180 + 120; // 2-5 seconds
+                    boss.lockedY = null; // Unlock Y
+                }
+            }
+            
+            // Check sparkle collision with boss
+            sparkles.forEach(sparkle => {
+                const dx = sparkle.x - boss.x;
+                const dy = sparkle.y - boss.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 50) {
+                    boss.health -= 0.5;
+                    boss.damageFlash = 10;
+                }
+            });
+            
+            // Check if boss is defeated
+            if (boss.health <= 0) {
+                // Big explosion
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        if (boss) {
+                            createExplosion(
+                                boss.x + (Math.random() - 0.5) * 80,
+                                boss.y + (Math.random() - 0.5) * 60,
+                                40
+                            );
+                            playExplosionSound();
+                        }
+                    }, i * 100);
+                }
+                
+                // Award points
+                score += 50;
+                scoreDisplay.textContent = score;
+                
+                // Remove boss
+                setTimeout(() => {
+                    boss = null;
+                    bossDefeated = true;
+                }, 500);
+            }
+            
+            // Check collision with dog
+            if (!invincible && damageFlash === 0) {
+                const dogCenterX = dachshund.x + dachshund.width * 0.6;
+                const dogCenterY = dachshund.y + dachshund.height / 2;
+                
+                const dx = dogCenterX - boss.x;
+                const dy = dogCenterY - boss.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist < 50) {
+                    takeDamage();
+                }
+            }
+        }
+
+        // Draw asteroid (pixelated rocky shape)
+        function drawAsteroid(asteroid) {
+            const x = asteroid.x;
+            const y = asteroid.y;
+            const size = asteroid.size;
+            const halfSize = size / 2;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(asteroid.rotation);
+            
+            // Main body - lighter grey
+            ctx.fillStyle = '#A0A0A0';
+            ctx.fillRect(-halfSize * 0.8, -halfSize * 0.6, size * 0.8, size * 0.6);
+            ctx.fillRect(-halfSize * 0.6, -halfSize * 0.8, size * 0.6, size * 0.8);
+            ctx.fillRect(-halfSize * 0.4, -halfSize, size * 0.4, size);
+            ctx.fillRect(-halfSize, -halfSize * 0.4, size, size * 0.4);
+            
+            // Lighter highlights
+            ctx.fillStyle = '#C8C8C8';
+            ctx.fillRect(-halfSize * 0.5, -halfSize * 0.7, size * 0.3, size * 0.2);
+            ctx.fillRect(-halfSize * 0.7, -halfSize * 0.3, size * 0.2, size * 0.3);
+            
+            // Dark craters
+            ctx.fillStyle = '#686868';
+            ctx.fillRect(halfSize * 0.1, halfSize * 0.1, size * 0.15, size * 0.15);
+            ctx.fillRect(-halfSize * 0.4, halfSize * 0.2, size * 0.1, size * 0.1);
+            ctx.fillRect(halfSize * 0.3, -halfSize * 0.4, size * 0.12, size * 0.12);
+            
+            ctx.restore();
+        }
+
+        // Spawn asteroid
+        function spawnAsteroid() {
+            if (asteroids.length >= maxAsteroidsOnScreen) return;
+            
+            const minSize = Math.min(canvas.width, canvas.height) * 0.20; // 2x bigger min
+            const maxSize = Math.min(canvas.width, canvas.height) * maxAsteroidSize;
+            const size = minSize + Math.random() * (maxSize - minSize);
+            
+            const baseSpeed = canvas.width * 0.075 / 60; // 7.5% per second minimum (1.5x)
+            const maxSpeedPx = canvas.width * maxAsteroidSpeed / 60;
+            const speed = baseSpeed + Math.random() * (maxSpeedPx - baseSpeed);
+            
+            // Diagonal movement - random vertical speed
+            const verticalSpeed = (Math.random() - 0.5) * speed * 0.8;
+            
+            asteroids.push({
+                x: canvas.width + size,
+                y: Math.random() * (canvas.height - size * 2) + size,
+                size: size,
+                speed: speed,
+                vy: verticalSpeed,
+                rotation: Math.random() * Math.PI * 2, // Random starting rotation
+                rotationSpeed: (Math.random() - 0.5) * 0.02
+            });
+        }
+
+        // Update asteroids
+        function updateAsteroids() {
+            asteroidTimer++;
+            if (asteroidTimer >= asteroidSpawnInterval) {
+                spawnAsteroid();
+                asteroidTimer = 0;
+            }
+            
+            asteroids.forEach(asteroid => {
+                asteroid.x -= asteroid.speed;
+                asteroid.y += asteroid.vy;
+                asteroid.rotation += asteroid.rotationSpeed;
+                
+                // Bounce off top and bottom
+                if (asteroid.y - asteroid.size/2 < 0) {
+                    asteroid.y = asteroid.size/2;
+                    asteroid.vy = Math.abs(asteroid.vy);
+                }
+                if (asteroid.y + asteroid.size/2 > canvas.height) {
+                    asteroid.y = canvas.height - asteroid.size/2;
+                    asteroid.vy = -Math.abs(asteroid.vy);
+                }
+            });
+            
+            // Remove off-screen asteroids and count score
+            asteroids = asteroids.filter(asteroid => {
+                if (asteroid.x + asteroid.size < 0) {
+                    // Passed an asteroid - increase score
+                    score++;
+                    scoreDisplay.textContent = score;
+                    
+                    // Progress difficulty slowly
+                    maxAsteroidSize = Math.min(0.35, 0.30 + score * 0.002);
+                    maxAsteroidSpeed = Math.min(0.20, 0.12 + score * 0.002);
+                    maxAsteroidsOnScreen = Math.min(4, 1 + Math.floor(score / 10));
+                    asteroidSpawnInterval = Math.max(90, 180 - score * 2);
+                    
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        // Check asteroid collision
+        function checkAsteroidCollision() {
+            if (invincible || damageFlash > 0) return false;
+            
+            // Dog hitbox - shifted forward to match the visual
+            const dogCenterX = dachshund.x + dachshund.width * 0.6; // Shifted more to front
+            const dogCenterY = dachshund.y + dachshund.height / 2;
+            const dogRadius = dachshund.width / 2 - 8; // Wider hitbox for long body
+            
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const asteroid = asteroids[i];
+                const dx = dogCenterX - asteroid.x;
+                const dy = dogCenterY - asteroid.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const minDist = dogRadius + asteroid.size / 2;
+                
+                if (distance < minDist) {
+                    // Create explosion at asteroid position
+                    createExplosion(asteroid.x, asteroid.y, asteroid.size);
+                    playExplosionSound();
+                    // Remove the asteroid
+                    asteroids.splice(i, 1);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check collision
+        function checkCollision() {
+            // Ceiling - rest there, don't die
+            if (dachshund.y < 0) {
+                dachshund.y = 0;
+                dachshund.velocity = 0;
+            }
+            
+            // Ground - rest there, don't die
+            if (dachshund.y + dachshund.height > canvas.height) {
+                dachshund.y = canvas.height - dachshund.height;
+                dachshund.velocity = 0;
+            }
+            
+            // Check asteroid collision
+            return checkAsteroidCollision();
+        }
+
+        // Take damage
+        function takeDamage() {
+            hearts--;
+            updateHeartsDisplay();
+            damageFlash = 90; // 1.5 seconds of invulnerability after hit
+            
+            if (hearts <= 0) {
+                gameOver();
+            }
+        }
+
+        // Initialize audio
+        async function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                microphone = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.3;
+                
+                microphone.connect(analyser);
+                
+                micReady = true;
+                controlMode = 'mic';
+                micStatus.textContent = 'Microphone ready!';
+                micStatus.classList.add('active');
+                
+                // Move to start screen
+                gameState = 'start';
+                controlOverlay.classList.add('hidden');
+                startOverlay.classList.remove('hidden');
+                controlHint.textContent = 'Make noise to fly!';
+                volumeMeter.style.display = 'flex';
+                
+            } catch (err) {
+                console.error('Microphone error:', err);
+                micStatus.textContent = 'Mic denied! Try tap mode instead.';
+                micStatus.classList.add('error');
+            }
+        }
+
+        function selectTapMode() {
+            controlMode = 'tap';
+            gameState = 'start';
+            controlOverlay.classList.add('hidden');
+            startOverlay.classList.remove('hidden');
+            controlHint.textContent = 'Tap/hold screen to fly!';
+            volumeMeter.style.display = 'none';
+        }
+
+        // Get volume level
+        function getVolumeLevel() {
+            if (!analyser) return 0;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+            }
+            
+            return sum / dataArray.length;
+        }
+
+        // Fullscreen
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // Update game
+        function update() {
+            if (gameState !== 'playing') return;
+            
+            // Apply physics
+            dachshund.velocity += gravity;
+            
+            if (controlMode === 'mic') {
+                // Get volume
+                volumeLevel = getVolumeLevel();
+                volumeBar.style.width = Math.min(100, volumeLevel) + '%';
+                
+                // Apply lift based on volume
+                if (volumeLevel > VOLUME_THRESHOLD) {
+                    const liftStrength = Math.min(1, (volumeLevel - VOLUME_THRESHOLD) / 50);
+                    dachshund.velocity -= liftPower * liftStrength * 3;
+                }
+            } else {
+                // Tap mode - apply lift when tapping
+                if (isTapping) {
+                    dachshund.velocity -= liftPower;
+                    volumeLevel = 50; // For tongue animation
+                } else {
+                    volumeLevel = 0;
+                }
+            }
+            
+            // Clamp velocity
+            dachshund.velocity = Math.max(-4, Math.min(4, dachshund.velocity));
+            
+            // Update position
+            dachshund.y += dachshund.velocity;
+            
+            // Update game elements
+            updateStars();
+            emitSparkles();
+            updateSparkles();
+            updateExplosions();
+            updateBoss();
+            if (!settingsOpen) {
+                updateAsteroids();
+                updateBalls();
+                checkBallCollection();
+            }
+            
+            // Update invincibility
+            if (invincible) {
+                invincibleTimer--;
+                if (invincibleTimer <= 0) {
+                    invincible = false;
+                    invincibleIndicator.classList.add('hidden');
+                }
+            }
+            
+            // Update damage flash
+            if (damageFlash > 0) {
+                damageFlash--;
+            }
+            
+            // Check collision
+            if (checkCollision()) {
+                takeDamage();
+            }
+        }
+
+        // Render game
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars
+            drawStars();
+            
+            // Draw sparkles (behind dog)
+            drawSparkles();
+            
+            // Draw asteroids
+            asteroids.forEach(drawAsteroid);
+            
+            // Draw explosions
+            drawExplosions();
+            
+            // Draw boss
+            drawBoss();
+            
+            // Draw tennis balls
+            tennisBalls.forEach(drawTennisBall);
+            
+            // Draw rainbow balls
+            rainbowBalls.forEach(drawRainbowBall);
+            
+            // Draw dachshund (with flash effect if damaged or invincible)
+            if (damageFlash > 0 && Math.floor(damageFlash / 5) % 2 === 0) {
+                // Flash white when damaged
+                ctx.globalAlpha = 0.5;
+            }
+            if (invincible) {
+                // Rainbow glow when invincible
+                ctx.shadowColor = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF'][Math.floor(Date.now() / 100) % 6];
+                ctx.shadowBlur = 20;
+            }
+            drawDachshund();
+            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0;
+        }
+
+        // Game over
+        function gameOver() {
+            gameState = 'gameover';
+            
+            // Update high score
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('dachshundHighScore', highScore.toString());
+                highScoreDisplay.textContent = highScore;
+            }
+            
+            finalScoreDisplay.textContent = score;
+            gameOverOverlay.classList.remove('hidden');
+        }
+
+        // Reset game
+        function resetGame() {
+            dachshund.y = canvas.height / 2;
+            dachshund.velocity = 0;
+            dachshund.rotation = 0;
+            score = 0;
+            scoreDisplay.textContent = '0';
+            // Reset asteroids
+            asteroids = [];
+            asteroidTimer = 0;
+            asteroidSpawnInterval = 180;
+            maxAsteroidSize = 0.30;
+            maxAsteroidSpeed = 0.12;
+            maxAsteroidsOnScreen = 1;
+            // Reset health
+            hearts = 10;
+            updateHeartsDisplay();
+            invincible = false;
+            invincibleTimer = 0;
+            invincibleIndicator.classList.add('hidden');
+            damageFlash = 0;
+            // Reset balls
+            tennisBalls = [];
+            rainbowBalls = [];
+            tennisBallTimer = 0;
+            rainbowBallTimer = 0;
+            // Reset sparkles
+            sparkles = [];
+            // Reset explosions
+            explosions = [];
+            // Reset boss
+            boss = null;
+            bossTimer = 0;
+            bossDefeated = false;
+        }
+
+        // Start game
+        function startGame() {
+            if (controlMode === 'mic' && !micReady) return;
+            
+            resetGame();
+            initStars();
+            gameState = 'playing';
+            startOverlay.classList.add('hidden');
+            gameOverOverlay.classList.add('hidden');
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event listeners
+        micBtn.addEventListener('click', initAudio);
+        tapBtn.addEventListener('click', selectTapMode);
+        
+        playBtn.addEventListener('click', () => {
+            if (gameState === 'start') {
+                startGame();
+            }
+        });
+
+        restartBtn.addEventListener('click', () => {
+            startGame();
+        });
+        
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        
+        // Calibration panel
+        const calibrationBtn = document.getElementById('calibrationBtn');
+        const calibrationPanel = document.getElementById('calibrationPanel');
+        const gravitySlider = document.getElementById('gravitySlider');
+        const liftSlider = document.getElementById('liftSlider');
+        const gravityValue = document.getElementById('gravityValue');
+        const liftValue = document.getElementById('liftValue');
+        let settingsOpen = false;
+        
+        calibrationBtn.addEventListener('click', () => {
+            settingsOpen = !settingsOpen;
+            calibrationPanel.classList.toggle('hidden');
+            
+            // Clear asteroids when opening settings
+            if (settingsOpen) {
+                asteroids = [];
+                asteroidTimer = 0;
+            }
+        });
+        
+        gravitySlider.addEventListener('input', (e) => {
+            gravity = parseFloat(e.target.value);
+            gravityValue.textContent = gravity.toFixed(2);
+        });
+        
+        liftSlider.addEventListener('input', (e) => {
+            liftPower = parseFloat(e.target.value);
+            liftValue.textContent = liftPower.toFixed(2);
+        });
+
+        // Tap controls
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameState === 'playing' && controlMode === 'tap') {
+                isTapping = true;
+                e.preventDefault();
+            }
+        });
+        
+        canvas.addEventListener('touchend', () => {
+            isTapping = false;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            if (gameState === 'playing' && controlMode === 'tap') {
+                isTapping = true;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isTapping = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isTapping = false;
+        });
+
+        // Prevent scrolling on touch
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+        // Initialize
+        initStars();
+        gameLoop();
+    </script>
+</body>
+</html>
