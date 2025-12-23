@@ -22,7 +22,8 @@
       "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\bird2.png''\\)\\)\")",
       "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\bullet.png''\\)\\)\")",
       "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\heart1.png''\\)\\)\")",
-      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\tennis_ball2.png''\\)\\)\")"
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\res\\\\drawable\\\\tennis_ball2.png''\\)\\)\")",
+      "Bash(powershell -Command \"[Convert]::ToBase64String\\([IO.File]::ReadAllBytes\\(''c:\\\\code\\\\Spacedog\\\\app\\\\src\\\\main\\\\assets\\\\visitor1.ttf''\\)\\)\")"
     ]
   }
 }
