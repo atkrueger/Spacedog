@@ -105,7 +105,7 @@
             <h3>CALIBRATION</h3>
             <div class="slider-group">
                 <div class="slider-label"><span>SENSITIVITY</span><span class="slider-value" id="sensValue">7.0</span></div>
-                <input type="range" id="sensSlider" min="0" max="14" step="0.5" value="7">
+                <input type="range" id="sensSlider" min="0" max="20" step="0.5" value="7">
             </div>
             <div class="slider-group">
                 <div class="slider-label"><span>GRAVITY</span><span class="slider-value" id="gravValue">1.4</span></div>
@@ -134,12 +134,32 @@
         <div class="overlay hidden" id="readyOverlay">
             <h1>READY!</h1>
             <p class="instruction" id="controlHint">Make noise to fly!</p>
+            <div style="margin: 15px 0;">
+                <label style="color: #fff; margin-right: 10px;">START LEVEL:</label>
+                <select id="levelSelect" style="padding: 8px 15px; font-size: 16px; background: #333; color: #fff; border: 2px solid #FFD700; border-radius: 5px; cursor: pointer;">
+                    <option value="1">Level 1 - Tutorial</option>
+                    <option value="2">Level 2 - Sinister Swine</option>
+                    <option value="3">Level 3 - Foul Feline</option>
+                    <option value="4">Level 4 - The Magician</option>
+                    <option value="5">Level 5 - The Final Boss</option>
+                </select>
+            </div>
             <button class="btn" id="startBtn">START GAME</button>
         </div>
 
         <div class="overlay hidden" id="gameOverOverlay">
             <h1 style="color:#f44;">GAME OVER</h1>
             <p>Spacedog ran out of hearts!</p>
+            <div style="margin: 15px 0;">
+                <label style="color: #fff; margin-right: 10px;">RESTART LEVEL:</label>
+                <select id="restartLevelSelect" style="padding: 8px 15px; font-size: 16px; background: #333; color: #fff; border: 2px solid #FFD700; border-radius: 5px; cursor: pointer;">
+                    <option value="1">Level 1 - Tutorial</option>
+                    <option value="2">Level 2 - Sinister Swine</option>
+                    <option value="3">Level 3 - Foul Feline</option>
+                    <option value="4">Level 4 - The Magician</option>
+                    <option value="5">Level 5 - The Final Boss</option>
+                </select>
+            </div>
             <button class="btn" id="restartBtn">TRY AGAIN</button>
         </div>
 
@@ -498,7 +518,14 @@
 
     function drawObstacles() {
         obstacles.forEach(o => {
-            const img = o.type === 'spaceship' ? images.spaceship : images.bird;
+            let img;
+            if (o.type === 'spaceship') {
+                img = images.spaceship;
+            } else if (o.type === 'bullet') {
+                img = images.bullet;
+            } else {
+                img = images.bird;
+            }
             ctx.drawImage(img, o.x, o.y, o.width, o.height);
         });
     }
@@ -633,8 +660,8 @@
             y: canvas.height / 2,
             width: images.pig.width * scale,
             height: images.pig.height * scale,
-            maxLife: 15,
-            life: 15,
+            maxLife: 7,
+            life: 7,
             hit: false,
             hitTimer: 0,
             stage: 'BEGIN',
@@ -652,8 +679,8 @@
             y: Math.random() * canvas.height,
             width: images.cat.width * scale,
             height: images.cat.height * scale,
-            maxLife: 20,
-            life: 20,
+            maxLife: 10,
+            life: 10,
             hit: false,
             hitTimer: 0,
             stage: 'BEGIN',
@@ -670,8 +697,8 @@
             y: Math.random() * canvas.height,
             width: images.dachsFlipped.width * scale,
             height: images.dachsFlipped.height * scale,
-            maxLife: 25,
-            life: 25,
+            maxLife: 12,
+            life: 12,
             hit: false,
             hitTimer: 0,
             stage: 'BEGIN',
@@ -687,8 +714,8 @@
             y: Math.random() * canvas.height,
             width: images.rabbit.width * scale,
             height: images.rabbit.height * scale,
-            maxLife: 25,
-            life: 25,
+            maxLife: 12,
+            life: 12,
             hit: false,
             hitTimer: 0,
             stage: 'BEGIN',
@@ -700,15 +727,15 @@
     }
 
     function createShooter() {
-        const scale = getScale();
+        const scale = getScale() * 1.5; // Final boss is 1.5x larger
         boss = {
             type: 'shooter',
             x: canvas.width + 50,
             y: Math.random() * canvas.height,
             width: images.shuttleStationary.width * scale,
             height: images.shuttleStationary.height * scale,
-            maxLife: 40,
-            life: 40,
+            maxLife: 20,
+            life: 20,
             hit: false,
             hitTimer: 0,
             stage: 'BEGIN',
@@ -938,8 +965,8 @@
                         b.bulletsFired = 0;
                         b.isMoving = true;
                     } else {
-                        // Fire bullet
-                        const scale = getScale();
+                        // Fire bullet (1.5x smaller than normal scale)
+                        const scale = getScale() / 1.5;
                         obstacles.push({
                             type: 'bullet',
                             moveType: MOVE_HORIZONTAL,
@@ -1439,7 +1466,8 @@
         document.getElementById('readyOverlay').classList.add('hidden');
         gameState = 'playing';
         resetDachshund();
-        setLevel(1);
+        const startLevel = parseInt(document.getElementById('levelSelect').value);
+        setLevel(startLevel);
         hearts = CONFIG.START_HEARTS;
         updateHeartsDisplay();
     });
@@ -1448,16 +1476,17 @@
         document.getElementById('gameOverOverlay').classList.add('hidden');
         gameState = 'playing';
         resetDachshund();
-        setLevel(1);
+        const restartLevel = parseInt(document.getElementById('restartLevelSelect').value);
+        setLevel(restartLevel);
         hearts = CONFIG.START_HEARTS;
         updateHeartsDisplay();
     });
 
     document.getElementById('victoryRestartBtn').addEventListener('click', () => {
         document.getElementById('victoryOverlay').classList.add('hidden');
-        gameState = 'playing';
+        document.getElementById('readyOverlay').classList.remove('hidden');
+        gameState = 'ready';
         resetDachshund();
-        setLevel(1);
         hearts = CONFIG.START_HEARTS;
         updateHeartsDisplay();
     });
